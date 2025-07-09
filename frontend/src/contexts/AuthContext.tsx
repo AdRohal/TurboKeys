@@ -65,7 +65,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
 };
 
 interface AuthContextType extends AuthState {
-  login: (credentials: LoginRequest) => Promise<void>;
+  login: (credentials: LoginRequest | User) => Promise<void>;
   register: (userData: RegisterRequest) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -81,29 +81,43 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          dispatch({ type: 'AUTH_START' });
-          const user = await authAPI.getCurrentUser();
-          dispatch({ type: 'AUTH_SUCCESS', payload: { ...user, token } });
-        } catch (error) {
-          localStorage.removeItem('token');
-          dispatch({ type: 'AUTH_FAILURE', payload: 'Session expired' });
+    // Only auto-initialize auth if we're not on OAuth callback or profile completion pages
+    const currentPath = window.location.pathname;
+    const isAuthFlow = currentPath === '/oauth-callback' || currentPath === '/complete-profile';
+    
+    if (!isAuthFlow) {
+      const initializeAuth = async () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+          try {
+            dispatch({ type: 'AUTH_START' });
+            const user = await authAPI.getCurrentUser();
+            dispatch({ type: 'AUTH_SUCCESS', payload: { ...user, token } });
+          } catch (error) {
+            localStorage.removeItem('token');
+            dispatch({ type: 'AUTH_FAILURE', payload: 'Session expired' });
+          }
         }
-      }
-    };
+      };
 
-    initializeAuth();
+      initializeAuth();
+    }
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  const login = async (credentials: LoginRequest | User) => {
     try {
       dispatch({ type: 'AUTH_START' });
-      const response = await authAPI.login(credentials);
-      localStorage.setItem('token', response.token);
-      dispatch({ type: 'AUTH_SUCCESS', payload: response });
+      
+      // If it's a User object (from OAuth), use it directly
+      if ('id' in credentials) {
+        const token = localStorage.getItem('token') || '';
+        dispatch({ type: 'AUTH_SUCCESS', payload: { ...credentials, token } });
+      } else {
+        // Otherwise, it's login credentials
+        const response = await authAPI.login(credentials);
+        localStorage.setItem('token', response.token);
+        dispatch({ type: 'AUTH_SUCCESS', payload: response });
+      }
     } catch (error: any) {
       dispatch({ type: 'AUTH_FAILURE', payload: error.message || 'Login failed' });
       throw error;

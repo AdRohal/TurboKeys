@@ -1,5 +1,4 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -9,14 +8,10 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
     
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid token.' });
-    }
-
-    req.user = user;
+    // For in-memory auth, we just need the decoded user info
+    req.user = decoded;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

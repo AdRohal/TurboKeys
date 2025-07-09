@@ -163,6 +163,23 @@ class APIClient {
     const response = await this.client.get<ApiResponse<any>>('/users/stats');
     return this.handleResponse(response);
   }
+
+  // Generic HTTP methods
+  async get<T = any>(url: string): Promise<AxiosResponse<T>> {
+    return this.client.get(url);
+  }
+
+  async post<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
+    return this.client.post(url, data);
+  }
+
+  async put<T = any>(url: string, data?: any): Promise<AxiosResponse<T>> {
+    return this.client.put(url, data);
+  }
+
+  async delete<T = any>(url: string): Promise<AxiosResponse<T>> {
+    return this.client.delete(url);
+  }
 }
 
 export const apiClient = new APIClient();
@@ -187,3 +204,5 @@ export const userAPI = {
   updateProfile: apiClient.updateProfile.bind(apiClient),
   getUserStats: apiClient.getUserStats.bind(apiClient),
 };
+
+export default apiClient;

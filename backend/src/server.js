@@ -4,19 +4,21 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const session = require('express-session');
+const passport = require('./config/passport');
 const rateLimit = require('express-rate-limit');
-const mongoose = require('mongoose');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const testRoutes = require('./routes/tests');
 const wordRoutes = require('./routes/words');
+const mongoose = require('mongoose');
 
 const app = express();
 const PORT = process.env.PORT || 8081;
 
-// Database connection
+// Connect to database
 const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/turbokeys';
@@ -43,6 +45,21 @@ app.use(compression());
 app.use(morgan('combined'));
 app.use(limiter);
 app.use(cookieParser());
+
+// Session configuration for OAuth
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallback-session-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize passport
+app.use(passport.initialize());
+app.use(passport.session());
 
 // CORS configuration
 app.use(cors({

@@ -1,5 +1,5 @@
 const express = require('express');
-const { authenticateToken } = require('./auth');
+const auth = require('../middleware/auth');
 const router = express.Router();
 
 // In-memory test results storage (for development)
@@ -41,7 +41,7 @@ let testResults = [
 let nextTestId = 4;
 
 // Submit typing test result
-router.post('/submit', authenticateToken, (req, res) => {
+router.post('/submit', auth, (req, res) => {
   try {
     const {
       wpm,
@@ -84,7 +84,7 @@ router.post('/submit', authenticateToken, (req, res) => {
 });
 
 // Get user's test history
-router.get('/history', authenticateToken, (req, res) => {
+router.get('/history', auth, (req, res) => {
   try {
     const userResults = testResults
       .filter(result => result.userId === req.userId)
@@ -137,7 +137,7 @@ router.get('/leaderboard', (req, res) => {
 });
 
 // Get typing statistics
-router.get('/stats', authenticateToken, (req, res) => {
+router.get('/stats', auth, (req, res) => {
   try {
     const userResults = testResults.filter(result => result.userId === req.userId);
 

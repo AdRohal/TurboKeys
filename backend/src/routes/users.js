@@ -1,9 +1,9 @@
 const express = require('express');
-const { authenticateToken } = require('./auth');
+const auth = require('../middleware/auth');
 const router = express.Router();
 
 // Get user profile
-router.get('/profile', authenticateToken, (req, res) => {
+router.get('/profile', auth, (req, res) => {
   try {
     // In a real app, you'd fetch from database
     // For now, we'll simulate user data
@@ -31,7 +31,7 @@ router.get('/profile', authenticateToken, (req, res) => {
 });
 
 // Update user profile
-router.put('/profile', authenticateToken, (req, res) => {
+router.put('/profile', auth, (req, res) => {
   try {
     const { username, favoriteTestDuration, preferredTheme } = req.body;
 
@@ -56,7 +56,7 @@ router.put('/profile', authenticateToken, (req, res) => {
 });
 
 // Get user achievements/badges
-router.get('/achievements', authenticateToken, (req, res) => {
+router.get('/achievements', auth, (req, res) => {
   try {
     const achievements = [
       {

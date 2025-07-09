@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { authAPI } from '../services/api';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -28,8 +27,8 @@ const Login: React.FC = () => {
 
   const handleOAuthLogin = (provider: 'google' | 'github') => {
     const url = provider === 'google' 
-      ? authAPI.getGoogleAuthUrl() 
-      : authAPI.getGitHubAuthUrl();
+      ? 'http://localhost:8080/api/auth/oauth2/google'
+      : 'http://localhost:8080/api/auth/oauth2/github';
     window.location.href = url;
   };
 
