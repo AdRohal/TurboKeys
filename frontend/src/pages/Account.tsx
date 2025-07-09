@@ -6,7 +6,7 @@ const Account: React.FC = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-[90vh] flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
             Please log in to view your account
@@ -20,9 +20,9 @@ const Account: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-primary-900 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6">
+    <div className="h-[90vh] bg-gray-50 dark:bg-primary-900 py-8 overflow-hidden">
+      <div className="max-w-4xl mx-auto px-4 h-full flex flex-col">
+        <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6 flex-1 overflow-auto">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
             Account Information
           </h1>
