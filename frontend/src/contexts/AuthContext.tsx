@@ -13,13 +13,14 @@ type AuthAction =
   | { type: 'AUTH_START' }
   | { type: 'AUTH_SUCCESS'; payload: AuthUser }
   | { type: 'AUTH_FAILURE'; payload: string }
+  | { type: 'AUTH_INIT_COMPLETE' }
   | { type: 'LOGOUT' }
   | { type: 'CLEAR_ERROR' };
 
 const initialState: AuthState = {
   user: null,
   token: localStorage.getItem('token'),
-  loading: false,
+  loading: !!localStorage.getItem('token'), // Set loading to true if there's a token
   error: null,
 };
 
@@ -36,7 +37,7 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         loading: false,
         user: action.payload,
-        token: action.payload.token,
+        token: action.payload.token || state.token,
         error: null,
       };
     case 'AUTH_FAILURE':
@@ -46,6 +47,11 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         error: action.payload,
         user: null,
         token: null,
+      };
+    case 'AUTH_INIT_COMPLETE':
+      return {
+        ...state,
+        loading: false,
       };
     case 'LOGOUT':
       return {
@@ -90,13 +96,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = localStorage.getItem('token');
         if (token) {
           try {
-            dispatch({ type: 'AUTH_START' });
+            // Don't dispatch AUTH_START here since we already set loading to true in initial state
             const user = await authAPI.getCurrentUser();
             dispatch({ type: 'AUTH_SUCCESS', payload: { ...user, token } });
           } catch (error) {
             localStorage.removeItem('token');
             dispatch({ type: 'AUTH_FAILURE', payload: 'Session expired' });
           }
+        } else {
+          // No token, so we can stop loading without showing an error
+          dispatch({ type: 'AUTH_INIT_COMPLETE' });
         }
       };
 
@@ -111,7 +120,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // If it's a User object (from OAuth), use it directly
       if ('id' in credentials) {
         const token = localStorage.getItem('token') || '';
-        dispatch({ type: 'AUTH_SUCCESS', payload: { ...credentials, token } });
+        const authUser: AuthUser = { ...credentials, token };
+        dispatch({ type: 'AUTH_SUCCESS', payload: authUser });
       } else {
         // Otherwise, it's login credentials
         const response = await authAPI.login(credentials);

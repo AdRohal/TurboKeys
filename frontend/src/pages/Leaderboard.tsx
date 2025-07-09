@@ -1,27 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { typingAPI } from '../services/api';
-import { LeaderboardEntry, TestMode } from '../types';
+import { LeaderboardEntry } from '../types';
 
 const Leaderboard: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [selectedMode, setSelectedMode] = useState<TestMode>(TestMode.THIRTY_SECONDS);
+  const [selectedDuration, setSelectedDuration] = useState<number>(30);
+  const [selectedMode, setSelectedMode] = useState<string>('time');
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
         setLoading(true);
-        const data = await typingAPI.getLeaderboard(selectedMode, 50);
+        const data = await typingAPI.getLeaderboard(selectedDuration, selectedMode, selectedLanguage, 50);
         setLeaderboard(data);
       } catch (error) {
         console.error('Failed to load leaderboard:', error);
+        setLeaderboard([]);
       } finally {
         setLoading(false);
       }
     };
 
     loadLeaderboard();
-  }, [selectedMode]);
+  }, [selectedDuration, selectedMode, selectedLanguage]);
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -53,20 +56,66 @@ const Leaderboard: React.FC = () => {
           {/* Mode Selection */}
           <div className="card p-4 mb-8">
             <div className="flex justify-center">
-              <div className="flex space-x-2">
-                {Object.values(TestMode).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setSelectedMode(mode)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                      selectedMode === mode
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
+              <div className="flex flex-wrap space-x-2 space-y-2">
+                {/* Duration Selection */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Duration:
+                  </label>
+                  {[15, 30, 60, 120].map((duration) => (
+                    <button
+                      key={duration}
+                      onClick={() => setSelectedDuration(duration)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                        selectedDuration === duration
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {duration}s
+                    </button>
+                  ))}
+                </div>
+
+                {/* Mode Selection */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Mode:
+                  </label>
+                  {['time', 'words'].map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setSelectedMode(mode)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
+                        selectedMode === mode
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Language Selection */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Language:
+                  </label>
+                  {['english', 'french'].map((language) => (
+                    <button
+                      key={language}
+                      onClick={() => setSelectedLanguage(language)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
+                        selectedLanguage === language
+                          ? 'bg-primary-600 text-white'
+                          : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {language}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -95,15 +144,16 @@ const Leaderboard: React.FC = () => {
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center">
                           <span className="text-white text-sm font-bold">
-                            {entry.user.username.charAt(0).toUpperCase()}
+                            {(entry.user?.username || entry.username || 'U').charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <div className="font-medium text-gray-900 dark:text-gray-100">
-                            {entry.user.username}
+                            {entry.user?.username || entry.username || 'Unknown User'}
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {new Date(entry.completedAt).toLocaleDateString()}
+                            {entry.testCount ? `${entry.testCount} tests` : 
+                             entry.completedAt ? new Date(entry.completedAt).toLocaleDateString() : 'New racer'}
                           </div>
                         </div>
                       </div>
@@ -111,7 +161,7 @@ const Leaderboard: React.FC = () => {
                     <div className="flex items-center space-x-6">
                       <div className="text-center">
                         <div className="text-lg font-bold text-primary-600">
-                          {entry.wpm}
+                          {entry.bestWpm || entry.wpm}
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                           WPM
@@ -119,12 +169,22 @@ const Leaderboard: React.FC = () => {
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-bold text-green-600">
-                          {entry.accuracy}%
+                          {Math.round(entry.bestAccuracy || entry.accuracy)}%
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                           Accuracy
                         </div>
                       </div>
+                      {entry.bestScore && (
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-purple-600">
+                            {entry.bestScore}
+                          </div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            Score
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

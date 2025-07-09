@@ -49,11 +49,18 @@ class APIClient {
     );
   }
 
-  private async handleResponse<T>(response: AxiosResponse<ApiResponse<T>>): Promise<T> {
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+  private async handleResponse<T>(response: AxiosResponse<ApiResponse<T> | T>): Promise<T> {
+    // Handle wrapped response (with success/data structure)
+    if (response.data && typeof response.data === 'object' && 'success' in response.data && 'data' in response.data) {
+      const apiResponse = response.data as ApiResponse<T>;
+      if (apiResponse.success && apiResponse.data) {
+        return apiResponse.data;
+      }
+      throw new Error(apiResponse.error || apiResponse.message || 'API request failed');
     }
-    throw new Error(response.data.error || response.data.message || 'API request failed');
+    
+    // Handle direct response (data returned directly)
+    return response.data as T;
   }
 
   // Check if backend is available
@@ -113,7 +120,7 @@ class APIClient {
       return mockTypingAPI.submitTest(result);
     }
     
-    const response = await this.client.post<ApiResponse<TypingTestResult>>('/tests/submit', result);
+    const response = await this.client.post<ApiResponse<TypingTestResult>>('/typing-tests/submit', result);
     return this.handleResponse(response);
   }
 
@@ -122,16 +129,55 @@ class APIClient {
       return mockTypingAPI.getUserTests(limit);
     }
     
-    const response = await this.client.get<ApiResponse<TypingTestResult[]>>(`/tests/user${limit ? `?limit=${limit}` : ''}`);
+    const response = await this.client.get<ApiResponse<TypingTestResult[]>>(`/typing-tests/user${limit ? `?limit=${limit}` : ''}`);
     return this.handleResponse(response);
   }
 
-  async getLeaderboard(mode: TestMode, limit: number = 10): Promise<LeaderboardEntry[]> {
+  async getTypingHistory(page: number = 1, limit: number = 20, duration?: number, mode?: string, language?: string): Promise<{ tests: TypingTestResult[], totalPages: number, currentPage: number, total: number }> {
     if (!(await this.isBackendAvailable())) {
-      return mockTypingAPI.getLeaderboard(mode, limit);
+      return { tests: await mockTypingAPI.getUserTests(limit), totalPages: 1, currentPage: 1, total: 0 };
     }
     
-    const response = await this.client.get<ApiResponse<LeaderboardEntry[]>>(`/tests/leaderboard?mode=${mode}&limit=${limit}`);
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    if (duration) params.append('duration', duration.toString());
+    if (mode) params.append('mode', mode);
+    if (language) params.append('language', language);
+    
+    const response = await this.client.get<ApiResponse<{ tests: TypingTestResult[], totalPages: number, currentPage: number, total: number }>>(`/typing-tests/history?${params}`);
+    return this.handleResponse(response);
+  }
+
+  async getBestScores(): Promise<any[]> {
+    if (!(await this.isBackendAvailable())) {
+      return [];
+    }
+    
+    const response = await this.client.get<ApiResponse<any[]>>('/typing-tests/best-scores');
+    return this.handleResponse(response);
+  }
+
+  async getLeaderboard(duration: number = 30, mode: string = 'time', language: string = 'english', limit: number = 50): Promise<LeaderboardEntry[]> {
+    if (!(await this.isBackendAvailable())) {
+      return mockTypingAPI.getLeaderboard(TestMode.THIRTY_SECONDS, limit);
+    }
+    
+    const params = new URLSearchParams({ 
+      duration: duration.toString(), 
+      mode, 
+      language, 
+      limit: limit.toString() 
+    });
+    
+    const response = await this.client.get<ApiResponse<LeaderboardEntry[]>>(`/typing-tests/leaderboard?${params}`);
+    return this.handleResponse(response);
+  }
+
+  async getTypingStats(): Promise<any> {
+    if (!(await this.isBackendAvailable())) {
+      return {};
+    }
+    
+    const response = await this.client.get<ApiResponse<any>>('/typing-tests/stats');
     return this.handleResponse(response);
   }
 
@@ -196,7 +242,10 @@ export const authAPI = {
 export const typingAPI = {
   submitTest: apiClient.submitTypingTest.bind(apiClient),
   getUserTests: apiClient.getUserTests.bind(apiClient),
+  getHistory: apiClient.getTypingHistory.bind(apiClient),
+  getBestScores: apiClient.getBestScores.bind(apiClient),
   getLeaderboard: apiClient.getLeaderboard.bind(apiClient),
+  getStats: apiClient.getTypingStats.bind(apiClient),
   getWords: apiClient.getWords.bind(apiClient),
 };
 

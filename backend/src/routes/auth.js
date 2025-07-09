@@ -38,6 +38,7 @@ router.post('/register', async (req, res) => {
       email,
       password,
       username,
+      profileCompleted: true, // Normal registration is complete
       totalTests: 0,
       averageWPM: 0,
       averageAccuracy: 0,
@@ -52,16 +53,17 @@ router.post('/register', async (req, res) => {
 
     res.status(201).json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        totalTests: user.totalTests,
-        averageWPM: user.averageWPM,
-        averageAccuracy: user.averageAccuracy,
-        bestWPM: user.bestWPM,
-        bestAccuracy: user.bestAccuracy
-      }
+      id: user._id,
+      email: user.email,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileCompleted: user.profileCompleted,
+      totalTests: user.totalTests,
+      averageWPM: user.averageWPM,
+      averageAccuracy: user.averageAccuracy,
+      bestWPM: user.bestWPM,
+      bestAccuracy: user.bestAccuracy
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -96,16 +98,17 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
-      user: {
-        id: user._id,
-        email: user.email,
-        username: user.username,
-        totalTests: user.totalTests,
-        averageWPM: user.averageWPM,
-        averageAccuracy: user.averageAccuracy,
-        bestWPM: user.bestWPM,
-        bestAccuracy: user.bestAccuracy
-      }
+      id: user._id,
+      email: user.email,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      profileCompleted: user.profileCompleted,
+      totalTests: user.totalTests,
+      averageWPM: user.averageWPM,
+      averageAccuracy: user.averageAccuracy,
+      bestWPM: user.bestWPM,
+      bestAccuracy: user.bestAccuracy
     });
   } catch (error) {
     console.error('Login error:', error);

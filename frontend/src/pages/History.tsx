@@ -1,79 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-
-interface TypingTestHistory {
-  id: string;
-  wpm: number;
-  accuracy: number;
-  charactersTyped: number;
-  errorsCount: number;
-  duration: number;
-  mode: string;
-  language: string;
-  completedAt: string;
-}
+import { typingAPI } from '../services/api';
+import { TypingTestResult } from '../types';
 
 const History: React.FC = () => {
   const { user } = useAuth();
-  const [history, setHistory] = useState<TypingTestHistory[]>([]);
+  const [history, setHistory] = useState<TypingTestResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'date' | 'wpm' | 'accuracy'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
+  const [selectedMode, setSelectedMode] = useState<string>('');
+  const [totalTests, setTotalTests] = useState(0);
 
   useEffect(() => {
-    // Simulate loading test history
-    // In a real app, this would fetch from your API
-    setTimeout(() => {
-      const mockHistory: TypingTestHistory[] = [
-        {
-          id: '1',
-          wpm: 65,
-          accuracy: 95,
-          charactersTyped: 250,
-          errorsCount: 13,
-          duration: 60,
-          mode: 'words',
-          language: 'english',
-          completedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
-        },
-        {
-          id: '2',
-          wpm: 72,
-          accuracy: 98,
-          charactersTyped: 300,
-          errorsCount: 6,
-          duration: 60,
-          mode: 'time',
-          language: 'english',
-          completedAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-        },
-        {
-          id: '3',
-          wpm: 58,
-          accuracy: 92,
-          charactersTyped: 200,
-          errorsCount: 16,
-          duration: 60,
-          mode: 'words',
-          language: 'english',
-          completedAt: new Date(Date.now() - 259200000).toISOString(), // 3 days ago
-        },
-        {
-          id: '4',
-          wpm: 80,
-          accuracy: 99,
-          charactersTyped: 400,
-          errorsCount: 4,
-          duration: 60,
-          mode: 'time',
-          language: 'english',
-          completedAt: new Date(Date.now() - 345600000).toISOString(), // 4 days ago
-        },
-      ];
-      setHistory(mockHistory);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    const loadHistory = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const response = await typingAPI.getHistory(
+          1, 
+          100, // Get more records since we'll scroll through them 
+          selectedDuration || undefined, 
+          selectedMode || undefined, 
+          'english'
+        );
+        setHistory(response.tests);
+        setTotalTests(response.total);
+      } catch (error) {
+        console.error('Failed to load typing history:', error);
+        // Fallback to empty array if API fails
+        setHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, [user, selectedDuration, selectedMode]);
 
   const sortedHistory = [...history].sort((a, b) => {
     let aValue, bValue;
@@ -108,6 +73,17 @@ const History: React.FC = () => {
     }
   };
 
+  const durationOptions = [15, 30, 60, 120];
+  const modeOptions = ['time', 'words'];
+
+  const handleDurationFilter = (duration: number | null) => {
+    setSelectedDuration(duration);
+  };
+
+  const handleModeFilter = (mode: string) => {
+    setSelectedMode(mode);
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -124,33 +100,76 @@ const History: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-primary-900 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Typing History
-            </h1>
-            
-            <div className="flex items-center space-x-4">
-              <select
-                value={sortBy}
-                onChange={(e) => handleSort(e.target.value as 'date' | 'wpm' | 'accuracy')}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="date">Sort by Date</option>
-                <option value="wpm">Sort by WPM</option>
-                <option value="accuracy">Sort by Accuracy</option>
-              </select>
+    <div className="h-[90vh] bg-gray-50 dark:bg-primary-900 py-8 overflow-hidden">
+      <div className="max-w-6xl mx-auto px-4 h-full flex flex-col">          <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6 flex-1 flex flex-col overflow-hidden">
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Typing History
+              </h1>
               
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-3 py-2 bg-gray-200 dark:bg-primary-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-primary-600 transition-colors"
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </button>
+              <div className="text-sm text-gray-600 dark:text-gray-300">
+                Total Tests: {totalTests}
+              </div>
             </div>
-          </div>
+
+            {/* Filter Controls */}
+            <div className="mb-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Duration Filter */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Duration:
+                  </label>
+                  <select
+                    value={selectedDuration || ''}
+                    onChange={(e) => handleDurationFilter(e.target.value ? parseInt(e.target.value) : null)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Durations</option>
+                    {durationOptions.map(duration => (
+                      <option key={duration} value={duration}>{duration}s</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Mode Filter */}
+                <div className="flex items-center space-x-2">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Mode:
+                  </label>
+                  <select
+                    value={selectedMode}
+                    onChange={(e) => handleModeFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Modes</option>
+                    {modeOptions.map(mode => (
+                      <option key={mode} value={mode}>{mode}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Sort Controls */}
+                <div className="flex items-center space-x-4">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleSort(e.target.value as 'date' | 'wpm' | 'accuracy')}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="date">Sort by Date</option>
+                    <option value="wpm">Sort by WPM</option>
+                    <option value="accuracy">Sort by Accuracy</option>
+                  </select>
+                  
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="px-3 py-2 bg-gray-200 dark:bg-primary-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-primary-600 transition-colors"
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </button>
+                </div>
+              </div>
+            </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -166,9 +185,10 @@ const History: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full table-auto">
-                <thead>
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '450px' }}>
+                <table className="w-full table-auto">
+                <thead className="sticky top-0 bg-gray-50 dark:bg-primary-700 z-10">
                   <tr className="border-b border-gray-200 dark:border-gray-600">
                     <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
                       Date
@@ -236,6 +256,7 @@ const History: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
           

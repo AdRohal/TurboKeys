@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TestMode, Language } from '../types';
+import { typingAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const Home: React.FC = () => {
+  const { user } = useAuth();
   const [selectedMode, setSelectedMode] = useState<TestMode>(TestMode.THIRTY_SECONDS);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(Language.ENGLISH);
   const [isTestActive, setIsTestActive] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30);
+  const [timeLeft, setTimeLeft] = useState(30); // This should match the default mode
   const [userInput, setUserInput] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wpm, setWpm] = useState(0);
@@ -14,40 +18,37 @@ const Home: React.FC = () => {
   const [correctChars, setCorrectChars] = useState(0);
   const [totalChars, setTotalChars] = useState(0);
   const [startTime, setStartTime] = useState<Date | null>(null);
+  const [isSubmittingResult, setIsSubmittingResult] = useState(false);
+  const [wpmHistory, setWpmHistory] = useState<{ time: number; wpm: number; raw: number; accuracy: number }[]>([]);
+  const [errorHistory, setErrorHistory] = useState<{ time: number; errors: number }[]>([]);
+  const [lastErrorCount, setLastErrorCount] = useState(0);
   
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const isTimerRunningRef = useRef<boolean>(false);
+  const startTimeRef = useRef<Date | null>(null);
+  const timerId = useRef<number>(Math.random()); // Unique ID for this component instance
+  
+  // Add refs to store current values for timer callbacks
+  const totalCharsRef = useRef<number>(0);
+  const correctCharsRef = useRef<number>(0);
+  const wpmRef = useRef<number>(0);
+  const accuracyRef = useRef<number>(100);
 
-  // Listen for window resize and keyboard events
+  // Listen for window resize
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
     
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Start test when user presses any key (except special keys)
-      if (!isTestActive && !isTestComplete && 
-          !e.ctrlKey && !e.altKey && !e.metaKey && 
-          e.key !== 'Tab' && e.key !== 'Escape' && e.key !== 'F1' && 
-          e.key !== 'F2' && e.key !== 'F3' && e.key !== 'F4' && 
-          e.key !== 'F5' && e.key !== 'F6' && e.key !== 'F7' && 
-          e.key !== 'F8' && e.key !== 'F9' && e.key !== 'F10' && 
-          e.key !== 'F11' && e.key !== 'F12') {
-        // Focus on the textarea to start typing
-        textAreaRef.current?.focus();
-      }
-    };
-    
     window.addEventListener('resize', handleResize);
-    window.addEventListener('keydown', handleKeyDown);
     
     return () => {
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isTestActive, isTestComplete]);
+  }, []);
 
   // Sample texts for different languages - Multiple paragraphs for variety
   const sampleTexts = useCallback(() => ({
@@ -88,15 +89,22 @@ const Home: React.FC = () => {
   // State for current display text
   const [displayText, setDisplayText] = useState('');
 
-  // Initialize with random text on component mount (page load)
+  // Initialize with random text on component mount (page load) and when language/mode changes
   useEffect(() => {
+    const instanceId = timerId.current;
+    console.log('Component mount or language/mode changed, resetting test for instance:', instanceId);
+    const newTimeLeft = getTestDuration(selectedMode);
+    console.log('Setting timeLeft to:', newTimeLeft, 'for mode:', selectedMode, 'instance:', instanceId);
+    
+    // Aggressively stop any running timer
+    isTimerRunningRef.current = false;
+    if (timerRef.current) {
+      console.log('useEffect clearing timer:', timerRef.current, 'instance:', instanceId);
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
     setDisplayText(getRandomText(selectedLanguage));
-  }, [getRandomText, selectedLanguage]);
-
-  // Generate new random text when language changes
-  useEffect(() => {
-    setDisplayText(getRandomText(selectedLanguage));
-    // Reset test when language changes
     setIsTestActive(false);
     setIsTestComplete(false);
     setUserInput('');
@@ -106,37 +114,110 @@ const Home: React.FC = () => {
     setCorrectChars(0);
     setTotalChars(0);
     setStartTime(null);
-    setTimeLeft(getTestDuration(selectedMode));
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, [selectedLanguage, getRandomText, selectedMode, getTestDuration]);
+    startTimeRef.current = null;
+    setWpmHistory([]);
+    setErrorHistory([]);
+    setLastErrorCount(0);
+    setTimeLeft(newTimeLeft);
+
+    // Reset refs
+    totalCharsRef.current = 0;
+    correctCharsRef.current = 0;
+    wpmRef.current = 0;
+    accuracyRef.current = 100;
+
+    // Return cleanup function
+    return () => {
+      console.log('Component unmounting, cleaning up instance:', instanceId);
+      isTimerRunningRef.current = false;
+      if (timerRef.current) {
+        console.log('Cleanup clearing timer:', timerRef.current, 'instance:', instanceId);
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [getRandomText, selectedLanguage, selectedMode, getTestDuration]);
 
   // Start test
   const startTest = () => {
-    if (!isTestActive && !isTestComplete) {
-      setIsTestActive(true);
-      setStartTime(new Date());
-      setTimeLeft(getTestDuration(selectedMode));
-      
-      // Start timer
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsTestActive(false);
-            setIsTestComplete(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+    // Check if already running to prevent multiple starts
+    if (isTestActive || isTestComplete || isTimerRunningRef.current) {
+      console.log('Cannot start test - already active or timer running:', {
+        isTestActive, 
+        isTestComplete, 
+        timerRunning: isTimerRunningRef.current
+      });
+      return;
     }
+
+    console.log('Starting test... Timer ID:', timerId.current);
+    
+    // Clear any existing timer absolutely
+    if (timerRef.current) {
+      console.log('Force clearing existing timer:', timerRef.current);
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    const newStartTime = new Date();
+    const testDuration = getTestDuration(selectedMode);
+    
+    // Set all refs first before state
+    isTimerRunningRef.current = true;
+    startTimeRef.current = newStartTime;
+    
+    setIsTestActive(true);
+    setStartTime(newStartTime);
+    setTimeLeft(testDuration);
+    
+    console.log('Test started with duration:', testDuration, 'seconds');
+    console.log('Start time set to:', newStartTime);
+    
+    // Create timer with strict guards
+    let currentTime = testDuration;
+    
+    const intervalId = setInterval(() => {
+      // Double check we should still be running
+      if (!isTimerRunningRef.current) {
+        console.log('Timer stopping - ref says not running');
+        clearInterval(intervalId);
+        return;
+      }
+      
+      currentTime--;
+      console.log('Timer tick, time left:', currentTime, 'instance:', timerId.current);
+      
+      // Update React state
+      setTimeLeft(currentTime);
+      
+      if (currentTime <= 0) {
+        console.log('Timer completed, calling completeTest');
+        isTimerRunningRef.current = false;
+        clearInterval(intervalId);
+        completeTest();
+        return;
+      }
+      
+      // Record WPM data point every second - using a timeout to avoid React state issues
+      setTimeout(() => recordWpmDataPoint(), 10);
+    }, 1000);
+    
+    timerRef.current = intervalId;
+    console.log('Timer started with ID:', intervalId, 'instance:', timerId.current);
   };
 
   // Reset test
   const resetTest = () => {
+    console.log('resetTest called for instance:', timerId.current);
+    
+    // Aggressively stop timer
+    isTimerRunningRef.current = false;
+    if (timerRef.current) {
+      console.log('resetTest clearing timer:', timerRef.current);
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
     setIsTestActive(false);
     setIsTestComplete(false);
     setUserInput('');
@@ -146,15 +227,23 @@ const Home: React.FC = () => {
     setCorrectChars(0);
     setTotalChars(0);
     setStartTime(null);
-    setTimeLeft(getTestDuration(selectedMode));
+    startTimeRef.current = null;
+    setWpmHistory([]);
+    setErrorHistory([]);
+    setLastErrorCount(0);
+    
+    // Reset refs
+    totalCharsRef.current = 0;
+    correctCharsRef.current = 0;
+    wpmRef.current = 0;
+    accuracyRef.current = 100;
+    
+    const newTimeLeft = getTestDuration(selectedMode);
+    console.log('resetTest setting timeLeft to:', newTimeLeft, 'for mode:', selectedMode);
+    setTimeLeft(newTimeLeft);
     
     // Select a new random text
     setDisplayText(getRandomText(selectedLanguage));
-    
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
   };
 
   // Handle input
@@ -162,23 +251,12 @@ const Home: React.FC = () => {
     if (isTestComplete) return;
     
     const value = e.currentTarget.value;
+    console.log('handleInput called with value length:', value.length, 'isTestActive:', isTestActive);
     
-    // Start test on first input
-    if (!isTestActive && value.length > 0) {
-      startTest();
-    }
+    // Check if this is a valid typing input (not just spaces or empty)
+    const hasValidContent = value.trim().length > 0;
     
-    // If user reached the end of text, complete the test
-    if (value.length >= displayText.length) {
-      setIsTestActive(false);
-      setIsTestComplete(true);
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
-    }
-    
+    // Update input and character counts first
     setUserInput(value);
     setCurrentIndex(value.length);
     
@@ -192,8 +270,37 @@ const Home: React.FC = () => {
     setCorrectChars(correct);
     setTotalChars(value.length);
     
+    // Update refs for timer callbacks
+    correctCharsRef.current = correct;
+    totalCharsRef.current = value.length;
+    
+    console.log('Updated character counts - totalChars:', value.length, 'correctChars:', correct);
+    
     if (value.length > 0) {
-      setAccuracy(Math.round((correct / value.length) * 100));
+      const newAccuracy = Math.round((correct / value.length) * 100);
+      setAccuracy(newAccuracy);
+      accuracyRef.current = newAccuracy;
+    } else {
+      setAccuracy(100); // Reset to 100% when input is empty
+      accuracyRef.current = 100;
+    }
+    
+    // Start test only if we have valid content and the first character matches
+    if (!isTestActive && hasValidContent && value.length > 0 && value[0] === displayText[0]) {
+      console.log('Starting test due to valid first input');
+      startTest();
+    }
+    
+    // If user reached the end of text, complete the test
+    if (value.length >= displayText.length) {
+      console.log('Test completed: reached end of text');
+      completeTest();
+      return;
+    }
+    
+    // Record data point for graph if test is active
+    if (isTestActive && startTime) {
+      recordWpmDataPoint();
     }
   };
 
@@ -205,39 +312,51 @@ const Home: React.FC = () => {
         const wordsTyped = userInput.length / 5; // Standard: 5 characters = 1 word
         const currentWpm = Math.round((wordsTyped / timeElapsed) * 60);
         setWpm(currentWpm);
+        wpmRef.current = currentWpm;
       }
     }
   }, [userInput, isTestActive, startTime]);
 
-  // Reset when mode or language changes
-  useEffect(() => {
-    const resetTestFunction = () => {
-      setIsTestActive(false);
-      setIsTestComplete(false);
-      setUserInput('');
-      setCurrentIndex(0);
-      setWpm(0);
-      setAccuracy(100);
-      setCorrectChars(0);
-      setTotalChars(0);
-      setStartTime(null);
-      setTimeLeft(getTestDuration(selectedMode));
-      
-      // Select a new random text when language or mode changes
-      setDisplayText(getRandomText(selectedLanguage));
-      
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
+  // Record WPM data point for graph
+  const recordWpmDataPoint = useCallback(() => {
+    if (!startTime || !isTestActive) return;
     
-    resetTestFunction();
-  }, [selectedMode, selectedLanguage, getRandomText, getTestDuration]);
+    const totalDuration = getTestDuration(selectedMode);
+    const secondsElapsed = totalDuration - timeLeft;
+    
+    if (secondsElapsed > 0) {
+      const currentWpm = totalChars > 0 ? Math.round((correctChars / 5) / (secondsElapsed / 60)) : 0;
+      const rawWpm = totalChars > 0 ? Math.round((totalChars / 5) / (secondsElapsed / 60)) : 0;
+      const currentAccuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+      const totalCurrentErrors = totalChars - correctChars;
+      const newErrors = totalCurrentErrors - lastErrorCount;
+      
+      setWpmHistory(prev => [
+        ...prev,
+        {
+          time: secondsElapsed,
+          wpm: currentWpm,
+          raw: rawWpm,
+          accuracy: currentAccuracy
+        }
+      ]);
+      
+      setErrorHistory(prev => [
+        ...prev,
+        {
+          time: secondsElapsed,
+          errors: newErrors
+        }
+      ]);
+      
+      setLastErrorCount(totalCurrentErrors);
+    }
+  }, [startTime, isTestActive, timeLeft, totalChars, correctChars, selectedMode, getTestDuration, lastErrorCount]);
 
   // Cleanup
   useEffect(() => {
     return () => {
+      isTimerRunningRef.current = false;
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -252,22 +371,22 @@ const Home: React.FC = () => {
     const words = displayText.split(' ');
     const lines: string[] = [];
     let currentLine: string[] = [];
-    let currentLineLength = 0;
+    let currentLineLengthCount = 0;
     
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
       const wordLength = word.length;
       
       // Check if adding this word would exceed line length
-      if (currentLineLength + wordLength + (currentLine.length > 0 ? 1 : 0) > maxLineLength && currentLine.length > 0) {
+      if (currentLineLengthCount + wordLength + (currentLine.length > 0 ? 1 : 0) > maxLineLength && currentLine.length > 0) {
         // Start a new line
         lines.push(currentLine.join(' '));
         currentLine = [word];
-        currentLineLength = wordLength;
+        currentLineLengthCount = wordLength;
       } else {
         // Add word to current line
         currentLine.push(word);
-        currentLineLength += wordLength + (currentLine.length > 1 ? 1 : 0);
+        currentLineLengthCount += wordLength + (currentLine.length > 1 ? 1 : 0);
       }
     }
     
@@ -279,31 +398,46 @@ const Home: React.FC = () => {
     // Find current line based on character position
     let currentLineIndex = 0;
     let charsSoFar = 0;
+    let charsInCurrentLine = 0;
     
     for (let i = 0; i < lines.length; i++) {
       const lineLength = lines[i].length + (i < lines.length - 1 ? 1 : 0); // +1 for line break space
       if (currentIndex >= charsSoFar && currentIndex < charsSoFar + lineLength) {
         currentLineIndex = i;
+        charsInCurrentLine = currentIndex - charsSoFar;
         break;
       }
       charsSoFar += lineLength;
     }
     
-    // Show 3 lines starting from current line
+    // Determine which lines to show based on position within current line
+    let startLineIndex;
+    const currentLineLength = lines[currentLineIndex]?.length || 0;
+    const progressInLine = charsInCurrentLine / Math.max(currentLineLength, 1);
+    
+    if (progressInLine < 0.5) {
+      // User is in first half of current line, show current line as second line
+      startLineIndex = Math.max(0, currentLineIndex - 1);
+    } else {
+      // User is in second half of current line, show current line as first line
+      startLineIndex = currentLineIndex;
+    }
+    
+    // Show 3 lines starting from calculated start index
     const visibleLines = [];
     for (let i = 0; i < 3; i++) {
-      const lineIndex = currentLineIndex + i;
+      const lineIndex = startLineIndex + i;
       if (lineIndex < lines.length) {
-        visibleLines.push(lines[lineIndex]);
+        visibleLines.push({ text: lines[lineIndex], originalIndex: lineIndex });
       } else {
-        visibleLines.push(''); // Empty line
+        visibleLines.push({ text: '', originalIndex: -1 }); // Empty line
       }
     }
     
-    return visibleLines.map((line, lineIndex) => {
-      if (line === '') {
+    return visibleLines.map((lineData, displayIndex) => {
+      if (lineData.text === '') {
         return (
-          <div key={`empty-${lineIndex}`} className="h-[2rem] flex items-center justify-center">
+          <div key={`empty-${displayIndex}`} className="h-[2rem] flex items-center justify-center">
             <span className="text-transparent">.</span>
           </div>
         );
@@ -311,13 +445,13 @@ const Home: React.FC = () => {
       
       // Calculate the starting character index for this line
       let startIndex = 0;
-      for (let i = 0; i < currentLineIndex + lineIndex; i++) {
+      for (let i = 0; i < lineData.originalIndex; i++) {
         if (i < lines.length) {
           startIndex += lines[i].length + (i < lines.length - 1 ? 1 : 0);
         }
       }
       
-      const lineElements = line.split('').map((char, charIndex) => {
+      const lineElements = lineData.text.split('').map((char: string, charIndex: number) => {
         const globalIndex = startIndex + charIndex;
         let className = 'text-gray-400 dark:text-primary-300'; // Default untyped
         
@@ -348,12 +482,138 @@ const Home: React.FC = () => {
       });
       
       return (
-        <div key={lineIndex} className="h-[2rem] flex items-center justify-center whitespace-nowrap">
+        <div key={displayIndex} className="h-[2rem] flex items-center justify-center whitespace-nowrap">
           {lineElements}
         </div>
       );
     });
   };
+
+  // Submit test result to backend with provided values
+  const submitTestResultWithValues = useCallback(async (
+    submitStartTime: Date,
+    submitTotalChars: number, 
+    submitWpm: number,
+    submitAccuracy: number,
+    submitCorrectChars: number
+  ) => {
+    console.log('submitTestResultWithValues called');
+    console.log('User:', user);
+    console.log('StartTime:', submitStartTime);
+    console.log('Current state:', { 
+      wpm: submitWpm, 
+      accuracy: submitAccuracy, 
+      totalChars: submitTotalChars, 
+      correctChars: submitCorrectChars, 
+      displayText: displayText.length 
+    });
+    
+    if (!user) {
+      console.log('Cannot submit test result: user not logged in');
+      return;
+    }
+
+    if (!submitStartTime) {
+      console.log('Cannot submit test result: test was never started (startTime is null)');
+      return;
+    }
+
+    const testDuration = getTestDuration(selectedMode);
+    const errorsCount = Math.max(0, submitTotalChars - submitCorrectChars);
+
+    // Ensure we have valid data before submission - allow even minimal typing attempts
+    if (submitTotalChars === 0) {
+      console.log('Cannot submit test result: no characters typed', { totalChars: submitTotalChars, wpm: submitWpm });
+      return;
+    }
+
+    const testData = {
+      wpm: Math.round(submitWpm),
+      accuracy: Math.round(submitAccuracy), // accuracy is already a percentage (0-100)
+      duration: testDuration,
+      mode: 'time', // Set as 'time' mode consistently
+      language: selectedLanguage,
+      difficulty: 'medium',
+      charactersTyped: submitTotalChars,
+      errorsCount: errorsCount,
+      correctCharacters: submitCorrectChars,
+      totalCharacters: displayText.length,
+      testText: displayText.substring(0, Math.min(submitTotalChars, displayText.length)),
+      text: displayText
+    };
+
+    console.log('Submitting test result:', testData);
+
+    try {
+      setIsSubmittingResult(true);
+      const result = await typingAPI.submitTest(testData);
+      console.log('Test result submitted successfully:', result);
+      console.log('Result details:', result);
+    } catch (error) {
+      console.error('Failed to submit test result:', error);
+      console.error('Error details:', error);
+      // Show more detailed error information
+      if (error instanceof Error) {
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+    } finally {
+      setIsSubmittingResult(false);
+    }
+  }, [user, getTestDuration, selectedMode, selectedLanguage, displayText]);
+
+  // Complete test and submit results
+  const completeTest = useCallback(async () => {
+    // Prevent multiple calls to completeTest
+    if (isTestComplete) {
+      console.log('Test already completed, ignoring duplicate call');
+      return;
+    }
+    
+    // Stop timer first to prevent further calls
+    isTimerRunningRef.current = false;
+    if (timerRef.current) {
+      console.log('Clearing timer:', timerRef.current);
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    // Capture current values immediately to avoid stale closure issues
+    // Use the refs for current values to ensure we have the actual latest values
+    const currentStartTime = startTimeRef.current || startTime;
+    const currentTotalChars = totalCharsRef.current;
+    const currentWpm = wpmRef.current;
+    const currentAccuracy = accuracyRef.current;
+    const currentCorrectChars = correctCharsRef.current;
+    
+    console.log('Test completed! Final stats:', { 
+      wpm: currentWpm, 
+      accuracy: currentAccuracy, 
+      totalChars: currentTotalChars, 
+      correctChars: currentCorrectChars, 
+      timeLeft,
+      user: !!user,
+      startTime: !!currentStartTime,
+      startTimeValue: currentStartTime,
+      startTimeFromRef: startTimeRef.current
+    });
+    
+    setIsTestActive(false);
+    setIsTestComplete(true);
+
+    // Only submit result if user is logged in AND actually typed something
+    if (user && currentStartTime && currentTotalChars > 0) {
+      console.log('User is logged in and typed characters, submitting result...');
+      // Use the captured values for submission
+      await submitTestResultWithValues(currentStartTime, currentTotalChars, currentWpm, currentAccuracy, currentCorrectChars);
+    } else {
+      console.log('Not submitting result:', { 
+        user: !!user, 
+        startTime: !!currentStartTime, 
+        totalChars: currentTotalChars 
+      });
+    }
+  }, [isTestComplete, startTime, timeLeft, user, submitTestResultWithValues]);
 
   return (
     <div className="min-h-screen bg-white dark:bg-primary-900 text-gray-900 dark:text-primary-100">
@@ -366,73 +626,81 @@ const Home: React.FC = () => {
         </div>
 
         {/* Mode Selection - Clean and centered */}
-        <div className="flex justify-center mb-16">
-          <div className="flex flex-col items-center gap-8">
-            <div className="flex flex-wrap gap-3 justify-center">
-              {Object.values(TestMode).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => {
-                    setSelectedMode(mode);
-                    resetTest();
-                  }}
-                  className={`px-5 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    selectedMode === mode
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 dark:bg-primary-800 text-gray-700 dark:text-primary-200 hover:bg-gray-300 dark:hover:bg-primary-700 hover:text-gray-900 dark:hover:text-primary-100'
-                  }`}
-                >
-                  {mode}
-                </button>
-              ))}
-            </div>
+        {!isTestActive && !isTestComplete && (
+          <div className="flex justify-center mb-16">
+            <div className="flex flex-col items-center gap-8">
+              <div className="flex flex-wrap gap-3 justify-center">
+                {Object.values(TestMode).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      setSelectedMode(mode);
+                      resetTest();
+                    }}
+                    className={`px-5 py-3 rounded-lg text-sm font-medium transition-colors ${
+                      selectedMode === mode
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-200 dark:bg-primary-800 text-gray-700 dark:text-primary-200 hover:bg-gray-300 dark:hover:bg-primary-700 hover:text-gray-900 dark:hover:text-primary-100'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
 
-            <div className="flex flex-wrap gap-3 justify-center">
-              {Object.values(Language).map((language) => (
-                <button
-                  key={language}
-                  onClick={() => {
-                    setSelectedLanguage(language);
-                    resetTest();
-                  }}
-                  className={`px-5 py-3 rounded-lg text-sm font-medium transition-colors ${
-                    selectedLanguage === language
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-200 dark:bg-primary-800 text-gray-700 dark:text-primary-200 hover:bg-gray-300 dark:hover:bg-primary-700 hover:text-gray-900 dark:hover:text-primary-100'
-                  }`}
-                >
-                  {language === 'french' ? 'Français' : 'English'}
-                </button>
-              ))}
+              <div className="flex flex-wrap gap-3 justify-center">
+                {Object.values(Language).map((language) => (
+                  <button
+                    key={language}
+                    onClick={() => {
+                      setSelectedLanguage(language);
+                      resetTest();
+                    }}
+                    className={`px-5 py-3 rounded-lg text-sm font-medium transition-colors ${
+                      selectedLanguage === language
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-200 dark:bg-primary-800 text-gray-700 dark:text-primary-200 hover:bg-gray-300 dark:hover:bg-primary-700 hover:text-gray-900 dark:hover:text-primary-100'
+                    }`}
+                  >
+                    {language === 'french' ? 'Français' : 'English'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Typing Test - Clean centered layout like MonkeyType */}
         <div className="mx-auto px-4">
-          {/* Stats Display */}
-          <div className="flex justify-center space-x-12 mb-8">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{timeLeft}</div>
-              <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Time</div>
+          {/* Stats Display - Show during active test */}
+          {isTestActive && (
+            <div className="flex justify-center space-x-12 mb-8">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{timeLeft}</div>
+                <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Time</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{wpm}</div>
+                <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">WPM</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{accuracy}%</div>
+                <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Accuracy</div>
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{wpm}</div>
-              <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">WPM</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{accuracy}%</div>
-              <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Accuracy</div>
-            </div>
-          </div>
+          )}
           
           {/* Typing Area */}
           <div 
             className="relative cursor-text w-full overflow-hidden mb-8"
             style={{ height: '140px' }}
-            onClick={() => textAreaRef.current?.focus()}
+            onClick={() => {
+              if (!isTestComplete && textAreaRef.current) {
+                textAreaRef.current.focus();
+              }
+            }}
           >
-            <div className={`text-xl md:text-2xl font-mono max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-sm' : ''}`} style={{ whiteSpace: 'pre-wrap' }}>
+            <div className={`text-xl md:text-2xl font-mono max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-[1px]' : ''}`} style={{ whiteSpace: 'pre-wrap' }}>
               {getCharacterDisplay()}
             </div>
             
@@ -449,9 +717,12 @@ const Home: React.FC = () => {
             {/* Focus overlay */}
             {!isTestActive && !isTestComplete && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-gray-500 dark:text-primary-400">
-                  <p className="text-lg mb-1">Click here to start typing</p>
-                  <p className="text-sm opacity-75">Selected: {selectedMode} • {selectedLanguage === 'french' ? 'Français' : 'English'}</p>
+                <div className="bg-white/90 dark:bg-primary-800/90 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg border border-gray-200 dark:border-primary-700">
+                  <div className="text-center text-gray-700 dark:text-primary-200">
+                    <p className="text-lg font-medium mb-1">Click in the text area and start typing</p>
+                    <p className="text-sm opacity-75 mb-2">Selected: {selectedMode} • {selectedLanguage === 'french' ? 'Français' : 'English'}</p>
+                    <p className="text-xs opacity-60">Begin with the first character to start the timer</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -461,6 +732,98 @@ const Home: React.FC = () => {
           {isTestComplete && (
             <div className="text-center p-8 mb-6">
               <h2 className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d] mb-6">Test Complete!</h2>
+              
+              {/* Performance Graph */}
+              {wpmHistory.length > 0 && (
+                <div className="mb-8 bg-gray-50 dark:bg-primary-800 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Over Time</h3>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={wpmHistory.map((wpmPoint, index) => {
+                        const errorPoint = errorHistory[index];
+                        return {
+                          ...wpmPoint,
+                          errors: errorPoint && errorPoint.errors > 0 ? wpmPoint.wpm : null
+                        };
+                      })}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+                        <XAxis 
+                          dataKey="time" 
+                          stroke="#6B7280"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => `${value}s`}
+                        />
+                        <YAxis 
+                          stroke="#6B7280"
+                          tick={{ fontSize: 12 }}
+                          domain={[0, 'dataMax + 10']}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#1F2937', 
+                            border: 'none', 
+                            borderRadius: '8px',
+                            color: '#fff'
+                          }}
+                          formatter={(value: any, name: string) => {
+                            if (name === 'wpm') return [`${value} WPM`, 'WPM'];
+                            if (name === 'raw') return [`${value} Raw`, 'Raw WPM'];
+                            if (name === 'accuracy') return [`${value}%`, 'Accuracy'];
+                            if (name === 'errors') {
+                              // Find the actual error count for this time point
+                              const dataIndex = wpmHistory.findIndex(h => h.wpm === value);
+                              const actualErrors = dataIndex >= 0 && errorHistory[dataIndex] ? errorHistory[dataIndex].errors : 0;
+                              return [`${actualErrors} Error${actualErrors !== 1 ? 's' : ''}`, 'Errors'];
+                            }
+                            return [value, name];
+                          }}
+                          labelFormatter={(value) => `Time: ${value}s`}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="wpm" 
+                          stroke="#FBBF24" 
+                          strokeWidth={3}
+                          dot={{ fill: '#FBBF24', strokeWidth: 2, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#FBBF24', strokeWidth: 2 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="raw" 
+                          stroke="#6B7280" 
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          dot={false}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="errors" 
+                          stroke="transparent" 
+                          strokeWidth={0}
+                          dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }}
+                          activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2, fill: '#EF4444' }}
+                          connectNulls={false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-center space-x-6 mt-4 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                      <span className="text-gray-600 dark:text-gray-300">Net WPM</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-1 bg-gray-500 rounded-full"></div>
+                      <span className="text-gray-600 dark:text-gray-300">Raw WPM</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span className="text-gray-600 dark:text-gray-300">Errors</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 gap-8 mb-8">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-primary-600 dark:text-[#ffca8d]">{wpm}</div>
@@ -475,6 +838,61 @@ const Home: React.FC = () => {
                   <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Correct</div>
                 </div>
               </div>
+              
+              {/* Additional Stats Row */}
+              <div className="grid grid-cols-4 gap-4 mb-8 text-sm">
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                    {wpmHistory.length > 0 ? Math.max(...wpmHistory.map(h => h.raw)) : 0}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Raw</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                    {totalChars}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Characters</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                    {wpmHistory.length > 0 ? 
+                      Math.round((wpmHistory.reduce((sum, h) => sum + h.wpm, 0) / wpmHistory.length) * 100) / 100 
+                      : 0}
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Consistency</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-semibold text-gray-600 dark:text-gray-400">
+                    {getTestDuration(selectedMode)}s
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Time</div>
+                </div>
+              </div>
+              
+              {/* Submission Status */}
+              {user && (
+                <div className="mb-4">
+                  {isSubmittingResult ? (
+                    <div className="flex items-center justify-center space-x-2 text-yellow-600 dark:text-yellow-400">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
+                      <span className="text-sm">Saving your result...</span>
+                    </div>
+                  ) : (
+                    <div className="text-green-600 dark:text-green-400 text-sm">
+                      ✓ Result saved to your history
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {!user && (
+                <div className="mb-4 text-gray-600 dark:text-gray-400 text-sm">
+                  <a href="/login" className="text-primary-600 dark:text-primary-400 hover:underline">
+                    Sign in
+                  </a> to save your results and track your progress
+                </div>
+              )}
+              
               <button 
                 onClick={resetTest}
                 className="bg-primary-600 text-white px-8 py-3 rounded font-medium hover:bg-primary-700 transition-colors"
@@ -486,18 +904,20 @@ const Home: React.FC = () => {
 
           {!isTestActive && !isTestComplete && (
             <div className="text-center text-gray-500 dark:text-primary-400 mb-4">
-              <p className="text-sm">Click on the text above to start typing</p>
+              <p className="text-sm">Focus on the text area above and start typing to begin the test</p>
             </div>
           )}
         </div>
 
         {/* Instructions - Clean and minimal */}
-        <div className="max-w-4xl mx-auto mt-20 text-center">
-          <div className="text-sm text-gray-500 dark:text-primary-400 space-y-2">
-            <p>Click on the text area to start • Type the words exactly as shown • Use backspace to correct mistakes</p>
-            <p>Your WPM and accuracy will be calculated in real-time</p>
+        {!isTestActive && !isTestComplete && (
+          <div className="max-w-4xl mx-auto mt-20 text-center">
+            <div className="text-sm text-gray-500 dark:text-primary-400 space-y-2">
+              <p>Click on the text area to start • Type the words exactly as shown • Use backspace to correct mistakes</p>
+              <p>Your WPM and accuracy will be calculated in real-time</p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

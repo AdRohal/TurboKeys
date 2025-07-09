@@ -59,7 +59,7 @@ const Header: React.FC = () => {
               to="/"
               className="text-gray-600 hover:text-gray-900 dark:text-primary-300 dark:hover:text-primary-100 transition-colors"
             >
-              Test
+              Home
             </Link>
             <Link
               to="/leaderboard"
@@ -67,14 +67,6 @@ const Header: React.FC = () => {
             >
               Leaderboard
             </Link>
-            {user && (
-              <Link
-                to="/profile"
-                className="text-gray-600 hover:text-gray-900 dark:text-primary-300 dark:hover:text-primary-100 transition-colors"
-              >
-                Profile
-              </Link>
-            )}
           </nav>
 
           {/* Right side */}

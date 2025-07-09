@@ -34,8 +34,12 @@ export interface TypingTestResult {
   charactersTyped: number;
   errorsCount: number;
   duration: number; // in seconds
-  mode: TestMode;
+  mode: string;
   language: string;
+  difficulty?: string;
+  correctCharacters?: number;
+  totalCharacters?: number;
+  testText?: string;
   text: string;
   completedAt: Date;
 }
@@ -51,14 +55,21 @@ export interface TypingStats {
 
 export interface LeaderboardEntry {
   id: string;
-  user: {
+  user?: {
     id: string;
     username: string;
     profilePicture?: string;
   };
+  username?: string;
+  avatar?: string;
+  bestWpm?: number;
+  bestAccuracy?: number;
+  bestScore?: number;
+  testCount?: number;
+  latestTest?: Date;
   wpm: number;
   accuracy: number;
-  mode: TestMode;
+  mode: string;
   completedAt: Date;
 }
 
