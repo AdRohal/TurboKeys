@@ -1,0 +1,171 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+@layer base {
+  html {
+    font-family: 'JetBrains Mono', system-ui, sans-serif;
+    --scrollbar-track: #f8fafc;
+    --scrollbar-thumb: #cbd5e1;
+    --scrollbar-thumb-hover: #94a3b8;
+  }
+  
+  html.dark {
+    --scrollbar-track: #371931;
+    --scrollbar-thumb: #8d629b;
+    --scrollbar-thumb-hover: #a688b3;
+  }
+  
+  body {
+    @apply bg-white dark:bg-primary-900 text-gray-900 dark:text-[#ffca8d] transition-colors duration-300;
+  }
+
+  /* Custom Scrollbar Styling - Using CSS variables for better theme support */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 4px;
+    border: 1px solid var(--scrollbar-thumb);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  /* Custom height for screen to use 90vh instead of 100vh */
+  .h-screen {
+    height: 90vh !important;
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+  }
+
+  /* Form elements */
+  textarea::-webkit-scrollbar,
+  input::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  textarea::-webkit-scrollbar-track,
+  input::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: 3px;
+  }
+
+  textarea::-webkit-scrollbar-thumb,
+  input::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 3px;
+  }
+
+  textarea::-webkit-scrollbar-thumb:hover,
+  input::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  /* Additional fallback for stubborn browsers */
+  body::-webkit-scrollbar-track {
+    background: var(--scrollbar-track) !important;
+  }
+
+  body::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb) !important;
+  }
+
+  body::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover) !important;
+  }
+
+  /* Force update for all scrollable elements */
+  div::-webkit-scrollbar-track,
+  main::-webkit-scrollbar-track,
+  section::-webkit-scrollbar-track {
+    background: var(--scrollbar-track) !important;
+  }
+
+  div::-webkit-scrollbar-thumb,
+  main::-webkit-scrollbar-thumb,
+  section::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb) !important;
+  }
+
+  div::-webkit-scrollbar-thumb:hover,
+  main::-webkit-scrollbar-thumb:hover,
+  section::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover) !important;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-primary-900;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 dark:bg-primary-700 dark:hover:bg-primary-600 text-gray-900 dark:text-primary-100 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-primary-900;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 dark:border-primary-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-primary-800 text-gray-900 dark:text-primary-100 transition-colors duration-200;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-primary-800 rounded-lg shadow-lg border border-gray-200 dark:border-primary-700 transition-colors duration-300;
+  }
+  
+  .typing-text {
+    @apply font-mono text-xl leading-relaxed select-none;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal;
+    max-width: 100%;
+  }
+  
+  .char-correct {
+    @apply text-gray-900 dark:text-gray-100 bg-transparent;
+  }
+  
+  .char-incorrect {
+    @apply text-red-500 bg-red-100 dark:text-red-400 dark:bg-red-900/30 rounded;
+  }
+  
+  .char-current {
+    @apply bg-primary-600 text-white rounded animate-pulse;
+  }
+  
+  .char-untyped {
+    @apply text-gray-400 dark:text-gray-500;
+  }
+  
+  /* Special orange text for important content in dark mode */
+  .text-content-primary {
+    @apply text-gray-900 dark:text-[#ffca8d];
+  }
+  
+  .text-content-secondary {
+    @apply text-gray-700 dark:text-[#ffca8d];
+  }
+  
+  .text-content-paragraph {
+    @apply text-gray-800 dark:text-[#ffca8d];
+  }
+}
