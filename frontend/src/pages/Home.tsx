@@ -364,8 +364,33 @@ const Home: React.FC = () => {
   }, []);
 
   // Generate character display - Word-based line breaking with proper spacing
+  // Responsive for all screens, with even more granular breakpoints
   const getCharacterDisplay = () => {
-    const maxLineLength = windowWidth < 576 ? 40 : windowWidth < 768 ? 55 : windowWidth < 1024 ? 70 : windowWidth < 1440 ? 85 : 100;
+    // Ultra-granular breakpoints for modern devices
+    // < 320px: ultra small phones, < 340px: very small phones, < 360px: small phones, < 375px: iPhone SE, < 400px: small/old phones
+    // < 430px: iPhone 14 Pro Max, < 480px: medium phones, < 540px: phablets, < 576px: large phones/phablets
+    // < 640px: small tablets, < 720px: 7" tablets, < 768px: tablets, < 820px: iPad Mini, < 900px: large tablets
+    // < 1024px: small laptops, < 1152px: Chromebook, < 1280px: desktops, < 1366px: common laptops, < 1440px: large desktops, else: ultra-wide
+    const maxLineLength = windowWidth < 320 ? 18 // ultra small phones
+      : windowWidth < 340 ? 20 // very small phones
+      : windowWidth < 360 ? 22 // small phones
+      : windowWidth < 375 ? 24 // iPhone SE
+      : windowWidth < 400 ? 28 // small/old phones
+      : windowWidth < 430 ? 30 // iPhone 14 Pro Max
+      : windowWidth < 480 ? 32 // medium phones
+      : windowWidth < 540 ? 36 // phablets
+      : windowWidth < 576 ? 40 // large phones/phablets
+      : windowWidth < 640 ? 48 // small tablets
+      : windowWidth < 720 ? 52 // 7" tablets
+      : windowWidth < 768 ? 55 // tablets
+      : windowWidth < 820 ? 58 // iPad Mini
+      : windowWidth < 900 ? 62 // large tablets
+      : windowWidth < 1024 ? 70 // small laptops
+      : windowWidth < 1152 ? 75 // Chromebook
+      : windowWidth < 1280 ? 80 // desktops
+      : windowWidth < 1366 ? 70 // common laptops
+      : windowWidth < 1440 ? 75 // large desktops
+      : 100; // ultra-wide screens
     
     // Split text into words and reconstruct with proper spacing
     const words = displayText.split(' ');
@@ -615,6 +640,26 @@ const Home: React.FC = () => {
     }
   }, [isTestComplete, startTime, timeLeft, user, submitTestResultWithValues]);
 
+  // Responsive font size for typing area (more granular)
+  let fontSizeClass = 'text-xl';
+  if (windowWidth < 320) fontSizeClass = 'text-[0.7rem]'; // ultra small phones
+  else if (windowWidth < 340) fontSizeClass = 'text-xs'; // very small phones
+  else if (windowWidth < 360) fontSizeClass = 'text-sm'; // small phones
+  else if (windowWidth < 375) fontSizeClass = 'text-base'; // iPhone SE
+  else if (windowWidth < 400) fontSizeClass = 'text-[1.05rem]'; // small/old phones
+  else if (windowWidth < 430) fontSizeClass = 'text-[1.1rem]'; // iPhone 14 Pro Max
+  else if (windowWidth < 480) fontSizeClass = 'text-lg'; // medium phones
+  else if (windowWidth < 540) fontSizeClass = 'text-xl'; // phablets
+  else if (windowWidth < 576) fontSizeClass = 'text-lg'; // large phones/phablets
+  else if (windowWidth < 640) fontSizeClass = 'text-lg'; // small tablets
+  else if (windowWidth < 720) fontSizeClass = 'text-lg'; // 7" tablets
+  else if (windowWidth < 768) fontSizeClass = 'text-lg'; // tablets
+  else if (windowWidth < 900) fontSizeClass = 'text-lg'; // large tablets
+  else if (windowWidth < 1024) fontSizeClass = 'text-lg'; // small laptops
+  else if (windowWidth < 1280) fontSizeClass = 'text-xl'; // desktops
+  else if (windowWidth < 1440) fontSizeClass = 'text-1xl'; // large desktops
+  else fontSizeClass = 'text-2xl';
+
   return (
     <div className="min-h-screen bg-white dark:bg-primary-900 text-gray-900 dark:text-primary-100">
       <div className="container mx-auto px-4 py-12">
@@ -723,8 +768,13 @@ const Home: React.FC = () => {
               }
             }}
           >
-            <div className={`text-xl md:text-2xl font-mono max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-[1px]' : ''}`} style={{ whiteSpace: 'pre-wrap' }}>
-              {getCharacterDisplay()}
+            <div
+              className={`max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-[1px]' : ''}`}
+              style={{ whiteSpace: 'pre-wrap', fontSize: fontSizeClass.startsWith('text-') ? undefined : fontSizeClass.replace('text-[','').replace(']','') }}
+            >
+              <span className={`font-mono ${fontSizeClass}`}>
+                {getCharacterDisplay()}
+              </span>
             </div>
             
             {/* Invisible textarea for input */}
@@ -783,8 +833,8 @@ const Home: React.FC = () => {
                         />
                         <Tooltip 
                           contentStyle={{ 
-                            backgroundColor: '#1F2937', 
-                            border: 'none', 
+                            backgroundColor: '#1F2937',
+                            border: 'none',
                             borderRadius: '8px',
                             color: '#fff'
                           }}
@@ -900,19 +950,7 @@ const Home: React.FC = () => {
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
                       <span className="text-sm">Saving your result...</span>
                     </div>
-                  ) : (
-                    <div className="text-green-600 dark:text-green-400 text-sm">
-                      ✓ Result saved to your history
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {!user && (
-                <div className="mb-4 text-gray-600 dark:text-gray-400 text-sm">
-                  <a href="/login" className="text-primary-600 dark:text-primary-400 hover:underline">
-                    Sign in
-                  </a> to save your results and track your progress
+                  ) : null}
                 </div>
               )}
               
