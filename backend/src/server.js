@@ -17,7 +17,7 @@ const mongoose = require('mongoose');
 
 const app = express();
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT.trim(), 10) : null;
+const PORT = process.env.PORT || 8081;
 
 if (!PORT) {
   console.error('Error: PORT environment variable is not set or empty. Exiting...');
