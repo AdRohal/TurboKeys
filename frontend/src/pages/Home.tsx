@@ -640,6 +640,26 @@ const Home: React.FC = () => {
     }
   }, [isTestComplete, startTime, timeLeft, user, submitTestResultWithValues]);
 
+  // Responsive font size for typing area (more granular)
+  let fontSizeClass = 'text-xl';
+  if (windowWidth < 320) fontSizeClass = 'text-[0.7rem]'; // ultra small phones
+  else if (windowWidth < 340) fontSizeClass = 'text-xs'; // very small phones
+  else if (windowWidth < 360) fontSizeClass = 'text-sm'; // small phones
+  else if (windowWidth < 375) fontSizeClass = 'text-base'; // iPhone SE
+  else if (windowWidth < 400) fontSizeClass = 'text-[1.05rem]'; // small/old phones
+  else if (windowWidth < 430) fontSizeClass = 'text-[1.1rem]'; // iPhone 14 Pro Max
+  else if (windowWidth < 480) fontSizeClass = 'text-lg'; // medium phones
+  else if (windowWidth < 540) fontSizeClass = 'text-xl'; // phablets
+  else if (windowWidth < 576) fontSizeClass = 'text-lg'; // large phones/phablets
+  else if (windowWidth < 640) fontSizeClass = 'text-lg'; // small tablets
+  else if (windowWidth < 720) fontSizeClass = 'text-lg'; // 7" tablets
+  else if (windowWidth < 768) fontSizeClass = 'text-lg'; // tablets
+  else if (windowWidth < 900) fontSizeClass = 'text-lg'; // large tablets
+  else if (windowWidth < 1024) fontSizeClass = 'text-lg'; // small laptops
+  else if (windowWidth < 1280) fontSizeClass = 'text-xl'; // desktops
+  else if (windowWidth < 1440) fontSizeClass = 'text-1xl'; // large desktops
+  else fontSizeClass = 'text-2xl';
+
   return (
     <div className="min-h-screen bg-white dark:bg-primary-900 text-gray-900 dark:text-primary-100">
       <div className="container mx-auto px-4 py-12">
@@ -748,8 +768,13 @@ const Home: React.FC = () => {
               }
             }}
           >
-            <div className={`text-xl md:text-2xl font-mono max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-[1px]' : ''}`} style={{ whiteSpace: 'pre-wrap' }}>
-              {getCharacterDisplay()}
+            <div
+              className={`max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-[1px]' : ''}`}
+              style={{ whiteSpace: 'pre-wrap', fontSize: fontSizeClass.startsWith('text-') ? undefined : fontSizeClass.replace('text-[','').replace(']','') }}
+            >
+              <span className={`font-mono ${fontSizeClass}`}>
+                {getCharacterDisplay()}
+              </span>
             </div>
             
             {/* Invisible textarea for input */}
@@ -808,8 +833,8 @@ const Home: React.FC = () => {
                         />
                         <Tooltip 
                           contentStyle={{ 
-                            backgroundColor: '#1F2937', 
-                            border: 'none', 
+                            backgroundColor: '#1F2937',
+                            border: 'none',
                             borderRadius: '8px',
                             color: '#fff'
                           }}
