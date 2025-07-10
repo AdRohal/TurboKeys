@@ -10,6 +10,9 @@ const Account: React.FC = () => {
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [history, setHistory] = useState<TypingTestResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [firstNameError, setFirstNameError] = useState('');
+  const [lastNameError, setLastNameError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     const loadHistory = async () => {
@@ -66,13 +69,26 @@ const Account: React.FC = () => {
                     First Name
                   </label>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-primary-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter your first name"
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => {
+                          setFirstName(e.target.value);
+                          if (!e.target.value.trim()) {
+                            setFirstNameError('First name is required');
+                          } else {
+                            setFirstNameError('');
+                          }
+                        }}
+                        className={`w-full p-3 border ${firstNameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-primary-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        placeholder="Enter your first name"
+                        required
+                      />
+                      {firstNameError && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{firstNameError}</p>
+                      )}
+                    </>
                   ) : (
                     <div className="p-3 bg-gray-50 dark:bg-primary-700 rounded-lg">
                       <span className="text-gray-900 dark:text-white">
@@ -87,13 +103,26 @@ const Account: React.FC = () => {
                     Last Name
                   </label>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-primary-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Enter your last name"
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => {
+                          setLastName(e.target.value);
+                          if (!e.target.value.trim()) {
+                            setLastNameError('Last name is required');
+                          } else {
+                            setLastNameError('');
+                          }
+                        }}
+                        className={`w-full p-3 border ${lastNameError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-gray-600'} bg-white dark:bg-primary-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                        placeholder="Enter your last name"
+                        required
+                      />
+                      {lastNameError && (
+                        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{lastNameError}</p>
+                      )}
+                    </>
                   ) : (
                     <div className="p-3 bg-gray-50 dark:bg-primary-700 rounded-lg">
                       <span className="text-gray-900 dark:text-white">
@@ -121,14 +150,14 @@ const Account: React.FC = () => {
                   </div>
                 </div>
                 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     User ID
                   </label>
                   <div className="p-3 bg-gray-50 dark:bg-primary-700 rounded-lg">
                     <span className="text-gray-900 dark:text-white font-mono text-sm">{user.id}</span>
                   </div>
-                </div>
+                </div> */}
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -226,6 +255,15 @@ const Account: React.FC = () => {
                     <>
                       <button 
                         onClick={async () => {
+                          if (!firstName.trim()) {
+                            setFirstNameError('First name is required');
+                          }
+                          if (!lastName.trim()) {
+                            setLastNameError('Last name is required');
+                          }
+                          if (!firstName.trim() || !lastName.trim()) {
+                            return;
+                          }
                           try {
                             await userAPI.updateProfile({ firstName, lastName });
                             setIsEditing(false);
@@ -234,6 +272,7 @@ const Account: React.FC = () => {
                           }
                         }}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        disabled={!firstName.trim() || !lastName.trim()}
                       >
                         Save Changes
                       </button>
@@ -259,12 +298,45 @@ const Account: React.FC = () => {
                       <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                         Change Password
                       </button>
-                      <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-                        Download Data
+                      <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Delete Account
                       </button>
                     </>
                   )}
                 </div>
+                {/* Delete confirmation modal */}
+                {showDeleteConfirm && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-8 max-w-sm w-full">
+                      <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Confirm Account Deletion</h2>
+                      <p className="mb-6 text-gray-700 dark:text-gray-300">Are you sure you want to delete your account? This action cannot be undone.</p>
+                      <div className="flex justify-end gap-4">
+                        <button
+                          onClick={() => setShowDeleteConfirm(false)}
+                          className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await userAPI.deleteAccount();
+                              window.location.href = '/login';
+                            } catch (err) {
+                              alert('Failed to delete account.');
+                            }
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

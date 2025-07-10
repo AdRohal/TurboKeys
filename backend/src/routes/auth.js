@@ -5,6 +5,7 @@ const passport = require('../config/passport');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
+const TypingTest = require('../models/TypingTest');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -139,7 +140,7 @@ router.get('/me', auth, async (req, res) => {
       averageAccuracy: user.averageAccuracy,
       bestWPM: user.bestWPM,
       bestAccuracy: user.bestAccuracy,
-      createdAt: user.createdAt // Add createdAt to /me response
+      createdAt: user.createdAt
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -296,6 +297,23 @@ router.get('/check-username/:username', auth, async (req, res) => {
     res.json({ available: !existingUser });
   } catch (error) {
     console.error('Username check error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete current user account
+router.delete('/me', auth, async (req, res) => {
+  try {
+    // Delete all typing tests for this user
+    await TypingTest.deleteMany({ userId: req.user.userId });
+    // Delete the user
+    const user = await User.findByIdAndDelete(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'Account and typing scores deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
