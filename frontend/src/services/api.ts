@@ -210,6 +210,13 @@ class APIClient {
     return this.handleResponse(response);
   }
 
+  async deleteAccount(): Promise<void> {
+    if (!(await this.isBackendAvailable())) {
+      throw new Error('Cannot delete account in mock mode');
+    }
+    await this.client.delete('/auth/me');
+  }
+
   // Generic HTTP methods
   async get<T = any>(url: string): Promise<AxiosResponse<T>> {
     return this.client.get(url);
@@ -251,6 +258,7 @@ export const typingAPI = {
 
 export const userAPI = {
   updateProfile: apiClient.updateProfile.bind(apiClient),
+  deleteAccount: apiClient.deleteAccount.bind(apiClient),
   getUserStats: apiClient.getUserStats.bind(apiClient),
 };
 

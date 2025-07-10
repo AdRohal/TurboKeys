@@ -5,6 +5,7 @@ const passport = require('../config/passport');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const User = require('../models/User');
+const TypingTest = require('../models/TypingTest');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -14,7 +15,7 @@ const generateToken = (userId) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, username } = req.body;
+    const { email, password, username, firstName, lastName } = req.body;
 
     // Validate input
     if (!email || !password || !username) {
@@ -38,7 +39,9 @@ router.post('/register', async (req, res) => {
       email,
       password,
       username,
-      profileCompleted: true, // Normal registration is complete
+      firstName: firstName || '',
+      lastName: lastName || '',
+      profileCompleted: true,
       totalTests: 0,
       averageWPM: 0,
       averageAccuracy: 0,
@@ -63,7 +66,8 @@ router.post('/register', async (req, res) => {
       averageWPM: user.averageWPM,
       averageAccuracy: user.averageAccuracy,
       bestWPM: user.bestWPM,
-      bestAccuracy: user.bestAccuracy
+      bestAccuracy: user.bestAccuracy,
+      createdAt: user.createdAt
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -135,7 +139,8 @@ router.get('/me', auth, async (req, res) => {
       averageWPM: user.averageWPM,
       averageAccuracy: user.averageAccuracy,
       bestWPM: user.bestWPM,
-      bestAccuracy: user.bestAccuracy
+      bestAccuracy: user.bestAccuracy,
+      createdAt: user.createdAt
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -190,10 +195,7 @@ router.get('/oauth2/google', passport.authenticate('google', {
 router.get('/oauth2/google/callback', 
   passport.authenticate('google', { failureRedirect: '/login' }),
   (req, res) => {
-    // Successful authentication, generate JWT token
     const token = generateToken(req.user._id);
-    
-    // Always redirect to OAuth callback handler in frontend
     res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?token=${token}`);
   }
 );
@@ -205,10 +207,7 @@ router.get('/oauth2/github', passport.authenticate('github', {
 router.get('/oauth2/github/callback', 
   passport.authenticate('github', { failureRedirect: '/login' }),
   (req, res) => {
-    // Successful authentication, generate JWT token
     const token = generateToken(req.user._id);
-    
-    // Always redirect to OAuth callback handler in frontend
     res.redirect(`${process.env.FRONTEND_URL}/oauth-callback?token=${token}`);
   }
 );
@@ -218,17 +217,14 @@ router.post('/complete-profile', auth, async (req, res) => {
   try {
     const { fullName, username } = req.body;
 
-    // Validate input
     if (!fullName || !username) {
       return res.status(400).json({ error: 'Full name and username are required' });
     }
 
-    // Validate username format
     if (username.length < 3 || username.length > 30) {
       return res.status(400).json({ error: 'Username must be between 3 and 30 characters' });
     }
 
-    // Check if username is already taken by another user
     const existingUser = await User.findOne({ 
       username: username, 
       _id: { $ne: req.user.userId } 
@@ -238,13 +234,11 @@ router.post('/complete-profile', auth, async (req, res) => {
       return res.status(400).json({ error: 'Username is already taken' });
     }
 
-    // Update user profile
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Parse full name
     const nameParts = fullName.trim().split(' ');
     const firstName = nameParts[0];
     const lastName = nameParts.slice(1).join(' ');
@@ -269,7 +263,7 @@ router.post('/complete-profile', auth, async (req, res) => {
         averageWPM: user.averageWPM,
         averageAccuracy: user.averageAccuracy,
         bestWPM: user.bestWPM,
-        bestAccuracy: user.bestAccuracy
+        bestAccuzracy: user.bestAccuracy
       }
     });
   } catch (error) {
@@ -282,16 +276,28 @@ router.post('/complete-profile', auth, async (req, res) => {
 router.get('/check-username/:username', auth, async (req, res) => {
   try {
     const { username } = req.params;
-    
-    // Check if username is taken by another user
     const existingUser = await User.findOne({ 
       username: username, 
       _id: { $ne: req.user.userId } 
     });
-    
     res.json({ available: !existingUser });
   } catch (error) {
     console.error('Username check error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete current user account
+router.delete('/me', auth, async (req, res) => {
+  try {
+    await TypingTest.deleteMany({ userId: req.user.userId });
+    const user = await User.findByIdAndDelete(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'Account and typing scores deleted successfully' });
+  } catch (error) {
+    console.error('Delete account error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -628,43 +628,66 @@ const Home: React.FC = () => {
         {/* Mode Selection - Clean and centered */}
         {!isTestActive && !isTestComplete && (
           <div className="flex justify-center mb-16">
-            <div className="flex flex-col items-center gap-8">
-              <div className="flex flex-wrap gap-3 justify-center">
-                {Object.values(TestMode).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => {
-                      setSelectedMode(mode);
-                      resetTest();
-                    }}
-                    className={`px-5 py-3 rounded-lg text-sm font-medium transition-colors ${
-                      selectedMode === mode
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 dark:bg-primary-800 text-gray-700 dark:text-primary-200 hover:bg-gray-300 dark:hover:bg-primary-700 hover:text-gray-900 dark:hover:text-primary-100'
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
+            <div className="flex items-center space-x-6 px-6 py-3 bg-gray-100 dark:bg-primary-800 rounded-lg border border-gray-200 dark:border-primary-700">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-primary-400">⏱</span>
+                <span className="text-sm font-medium text-primary-600 dark:text-[#ffca8d]">time</span>
               </div>
-
-              <div className="flex flex-wrap gap-3 justify-center">
-                {Object.values(Language).map((language) => (
-                  <button
-                    key={language}
-                    onClick={() => {
-                      setSelectedLanguage(language);
-                      resetTest();
-                    }}
-                    className={`px-5 py-3 rounded-lg text-sm font-medium transition-colors ${
-                      selectedLanguage === language
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 dark:bg-primary-800 text-gray-700 dark:text-primary-200 hover:bg-gray-300 dark:hover:bg-primary-700 hover:text-gray-900 dark:hover:text-primary-100'
-                    }`}
-                  >
-                    {language === 'french' ? 'Français' : 'English'}
-                  </button>
-                ))}
+              <div className="flex items-center space-x-1">
+                <span className="text-sm text-gray-600 dark:text-primary-400">⚠</span>
+                <div className="flex space-x-1">
+                  { [
+                    { mode: TestMode.FIFTEEN_SECONDS, label: '15' },
+                    { mode: TestMode.THIRTY_SECONDS, label: '30' },
+                    { mode: TestMode.SIXTY_SECONDS, label: '60' },
+                    { mode: TestMode.ONE_TWENTY_SECONDS, label: '120' }
+                  ].map(({ mode, label }) => (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        if (!isTestActive && !isTestComplete) {
+                          setSelectedMode(mode);
+                          resetTest();
+                        }
+                      }}
+                      disabled={isTestActive || isTestComplete}
+                      className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
+                        selectedMode === mode
+                          ? 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                      } ${(isTestActive || isTestComplete) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {label}
+                    </button>
+                  )) }
+                </div>
+              </div>
+              <div className="flex items-center space-x-1">
+                <span className="text-sm text-gray-600 dark:text-primary-400">🌐</span>
+                <div className="flex space-x-1">
+                  { [
+                    { lang: Language.ENGLISH, label: 'english' },
+                    { lang: Language.FRENCH, label: 'français' }
+                  ].map(({ lang, label }) => (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        if (!isTestActive && !isTestComplete) {
+                          setSelectedLanguage(lang);
+                          resetTest();
+                        }
+                      }}
+                      disabled={isTestActive || isTestComplete}
+                      className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
+                        selectedLanguage === lang
+                          ? 'text-gray-700 dark:text-primary-200 bg-gray-200 dark:bg-primary-700'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-primary-200 hover:bg-gray-200 dark:hover:bg-primary-700'
+                      } ${(isTestActive || isTestComplete) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      {label}
+                    </button>
+                  )) }
+                </div>
               </div>
             </div>
           </div>
