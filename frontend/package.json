@@ -28,7 +28,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "vercel-build": "chmod +x node_modules/.bin/* && npm run build"
   },
   "engines": {
     "node": "18.x"
