@@ -364,8 +364,33 @@ const Home: React.FC = () => {
   }, []);
 
   // Generate character display - Word-based line breaking with proper spacing
+  // Responsive for all screens, with even more granular breakpoints
   const getCharacterDisplay = () => {
-    const maxLineLength = windowWidth < 576 ? 40 : windowWidth < 768 ? 55 : windowWidth < 1024 ? 70 : windowWidth < 1440 ? 85 : 100;
+    // Ultra-granular breakpoints for modern devices
+    // < 320px: ultra small phones, < 340px: very small phones, < 360px: small phones, < 375px: iPhone SE, < 400px: small/old phones
+    // < 430px: iPhone 14 Pro Max, < 480px: medium phones, < 540px: phablets, < 576px: large phones/phablets
+    // < 640px: small tablets, < 720px: 7" tablets, < 768px: tablets, < 820px: iPad Mini, < 900px: large tablets
+    // < 1024px: small laptops, < 1152px: Chromebook, < 1280px: desktops, < 1366px: common laptops, < 1440px: large desktops, else: ultra-wide
+    const maxLineLength = windowWidth < 320 ? 18 // ultra small phones
+      : windowWidth < 340 ? 20 // very small phones
+      : windowWidth < 360 ? 22 // small phones
+      : windowWidth < 375 ? 24 // iPhone SE
+      : windowWidth < 400 ? 28 // small/old phones
+      : windowWidth < 430 ? 30 // iPhone 14 Pro Max
+      : windowWidth < 480 ? 32 // medium phones
+      : windowWidth < 540 ? 36 // phablets
+      : windowWidth < 576 ? 40 // large phones/phablets
+      : windowWidth < 640 ? 48 // small tablets
+      : windowWidth < 720 ? 52 // 7" tablets
+      : windowWidth < 768 ? 55 // tablets
+      : windowWidth < 820 ? 58 // iPad Mini
+      : windowWidth < 900 ? 62 // large tablets
+      : windowWidth < 1024 ? 70 // small laptops
+      : windowWidth < 1152 ? 75 // Chromebook
+      : windowWidth < 1280 ? 80 // desktops
+      : windowWidth < 1366 ? 70 // common laptops
+      : windowWidth < 1440 ? 75 // large desktops
+      : 100; // ultra-wide screens
     
     // Split text into words and reconstruct with proper spacing
     const words = displayText.split(' ');
@@ -900,19 +925,7 @@ const Home: React.FC = () => {
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-600"></div>
                       <span className="text-sm">Saving your result...</span>
                     </div>
-                  ) : (
-                    <div className="text-green-600 dark:text-green-400 text-sm">
-                      ✓ Result saved to your history
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {!user && (
-                <div className="mb-4 text-gray-600 dark:text-gray-400 text-sm">
-                  <a href="/login" className="text-primary-600 dark:text-primary-400 hover:underline">
-                    Sign in
-                  </a> to save your results and track your progress
+                  ) : null}
                 </div>
               )}
               
