@@ -14,7 +14,13 @@ const Leaderboard: React.FC = () => {
       try {
         setLoading(true);
         const data = await typingAPI.getLeaderboard(selectedDuration, selectedMode, selectedLanguage, 50);
-        setLeaderboard(data);
+        // Sort by bestScore descending (fall back to 0 if not present)
+        const sorted = [...data].sort((a, b) => {
+          const scoreA = a.bestScore ?? 0;
+          const scoreB = b.bestScore ?? 0;
+          return scoreB - scoreA;
+        });
+        setLeaderboard(sorted);
       } catch (error) {
         console.error('Failed to load leaderboard:', error);
         setLeaderboard([]);
