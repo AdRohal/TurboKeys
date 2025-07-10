@@ -40,8 +40,8 @@ const Leaderboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-primary-900 py-8">
-      <div className="container mx-auto px-4">
+    <div className="h-[90vh] bg-white dark:bg-primary-900 py-8 overflow-hidden">
+      <div className="container mx-auto px-4 h-full flex flex-col">
         <div className="max-w-4xl mx-auto flex-1 flex flex-col">
           {/* Header */}
           <div className="text-center mb-8">

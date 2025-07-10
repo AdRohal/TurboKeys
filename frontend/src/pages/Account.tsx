@@ -1,8 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { typingAPI } from '../services/api';
+import { TypingTestResult } from '../types';
 
 const Account: React.FC = () => {
   const { user } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [history, setHistory] = useState<TypingTestResult[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const response = await typingAPI.getHistory(1, 100); // Get all user's tests
+        setHistory(response.tests);
+      } catch (error) {
+        console.error('Failed to load typing history:', error);
+        setHistory([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadHistory();
+  }, [user]);
 
   if (!user) {
     return (
@@ -22,7 +48,7 @@ const Account: React.FC = () => {
   return (
     <div className="h-[90vh] bg-gray-50 dark:bg-primary-900 py-8 overflow-hidden">
       <div className="max-w-4xl mx-auto px-4 h-full flex flex-col">
-        <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6 flex-1 overflow-auto">
+        <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6 flex-1 overflow-hidden">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
             Account Information
           </h1>
@@ -35,6 +61,48 @@ const Account: React.FC = () => {
               </h2>
               
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    First Name
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-primary-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter your first name"
+                    />
+                  ) : (
+                    <div className="p-3 bg-gray-50 dark:bg-primary-700 rounded-lg">
+                      <span className="text-gray-900 dark:text-white">
+                        {firstName || 'Not set'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Last Name
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-primary-700 text-gray-900 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter your last name"
+                    />
+                  ) : (
+                    <div className="p-3 bg-gray-50 dark:bg-primary-700 rounded-lg">
+                      <span className="text-gray-900 dark:text-white">
+                        {lastName || 'Not set'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Username
@@ -68,11 +136,29 @@ const Account: React.FC = () => {
                   </label>
                   <div className="p-3 bg-gray-50 dark:bg-primary-700 rounded-lg">
                     <span className="text-gray-900 dark:text-white">
-                      {new Date(user.createdAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                      {(() => {
+                        // Use account creation date if available
+                        if (user.createdAt) {
+                          return new Date(user.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          });
+                        }
+                        // Fallback to first test date if no account creation date
+                        if (history.length > 0) {
+                          const firstTest = history.sort((a, b) => 
+                            new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+                          )[0];
+                          return new Date(firstTest.completedAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          });
+                        }
+                        // Final fallback
+                        return 'Date not available';
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -85,62 +171,98 @@ const Account: React.FC = () => {
                 Account Statistics
               </h2>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {(user as any).totalTests || 0}
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {history.length}
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      Total Tests
+                    </div>
                   </div>
-                  <div className="text-sm text-blue-600 dark:text-blue-400">
-                    Total Tests
+                  
+                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {history.length > 0 ? Math.round(history.reduce((sum, test) => sum + test.wpm, 0) / history.length) : 0}
+                    </div>
+                    <div className="text-sm text-green-600 dark:text-green-400">
+                      Average WPM
+                    </div>
+                  </div>
+                  
+                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                      {history.length > 0 ? Math.round(history.reduce((sum, test) => sum + test.accuracy, 0) / history.length) : 0}%
+                    </div>
+                    <div className="text-sm text-purple-600 dark:text-purple-400">
+                      Average Accuracy
+                    </div>
+                  </div>
+                  
+                  <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                      {history.length > 0 ? Math.max(...history.map(test => test.wpm)) : 0}
+                    </div>
+                    <div className="text-sm text-orange-600 dark:text-orange-400">
+                      Best WPM
+                    </div>
                   </div>
                 </div>
+              )}
+              
+              {/* Account Actions */}
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-600">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  Account Actions
+                </h3>
                 
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {Math.round((user as any).averageWPM || 0)}
-                  </div>
-                  <div className="text-sm text-green-600 dark:text-green-400">
-                    Average WPM
-                  </div>
-                </div>
-                
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {Math.round((user as any).averageAccuracy || 0)}%
-                  </div>
-                  <div className="text-sm text-purple-600 dark:text-purple-400">
-                    Average Accuracy
-                  </div>
-                </div>
-                
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {Math.round((user as any).bestWPM || 0)}
-                  </div>
-                  <div className="text-sm text-orange-600 dark:text-orange-400">
-                    Best WPM
-                  </div>
+                <div className="flex flex-wrap gap-4">
+                  {isEditing ? (
+                    <>
+                      <button 
+                        onClick={() => {
+                          // TODO: Call API to save firstName and lastName
+                          console.log('Saving name:', firstName, lastName);
+                          setIsEditing(false);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                      >
+                        Save Changes
+                      </button>
+                      <button 
+                        onClick={() => {
+                          setFirstName(user?.firstName || '');
+                          setLastName(user?.lastName || '');
+                          setIsEditing(false);
+                        }}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        onClick={() => setIsEditing(true)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Edit Profile
+                      </button>
+                      <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        Change Password
+                      </button>
+                      <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                        Download Data
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
-            </div>
-          </div>
-          
-          {/* Account Actions */}
-          <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-              Account Actions
-            </h2>
-            
-            <div className="flex flex-wrap gap-4">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                Edit Profile
-              </button>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                Change Password
-              </button>
-              <button className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-                Download Data
-              </button>
             </div>
           </div>
         </div>
