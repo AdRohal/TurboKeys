@@ -14,7 +14,7 @@ const generateToken = (userId) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, username } = req.body;
+    const { email, password, username, firstName, lastName } = req.body;
 
     // Validate input
     if (!email || !password || !username) {
@@ -38,7 +38,9 @@ router.post('/register', async (req, res) => {
       email,
       password,
       username,
-      profileCompleted: true, // Normal registration is complete
+      firstName: firstName || '',
+      lastName: lastName || '', 
+      profileCompleted: true, 
       totalTests: 0,
       averageWPM: 0,
       averageAccuracy: 0,
@@ -63,7 +65,8 @@ router.post('/register', async (req, res) => {
       averageWPM: user.averageWPM,
       averageAccuracy: user.averageAccuracy,
       bestWPM: user.bestWPM,
-      bestAccuracy: user.bestAccuracy
+      bestAccuracy: user.bestAccuracy,
+      createdAt: user.createdAt
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -135,7 +138,8 @@ router.get('/me', auth, async (req, res) => {
       averageWPM: user.averageWPM,
       averageAccuracy: user.averageAccuracy,
       bestWPM: user.bestWPM,
-      bestAccuracy: user.bestAccuracy
+      bestAccuracy: user.bestAccuracy,
+      createdAt: user.createdAt // Add createdAt to /me response
     });
   } catch (error) {
     console.error('Get user error:', error);

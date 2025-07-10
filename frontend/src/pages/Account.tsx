@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { typingAPI } from '../services/api';
+import { typingAPI, userAPI } from '../services/api';
 import { TypingTestResult } from '../types';
 
 const Account: React.FC = () => {
@@ -225,10 +225,13 @@ const Account: React.FC = () => {
                   {isEditing ? (
                     <>
                       <button 
-                        onClick={() => {
-                          // TODO: Call API to save firstName and lastName
-                          console.log('Saving name:', firstName, lastName);
-                          setIsEditing(false);
+                        onClick={async () => {
+                          try {
+                            await userAPI.updateProfile({ firstName, lastName });
+                            setIsEditing(false);
+                          } catch (err) {
+                            alert('Failed to update profile.');
+                          }
                         }}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                       >

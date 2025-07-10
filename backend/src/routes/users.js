@@ -1,29 +1,17 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const User = require('../models/User');
 const router = express.Router();
 
 // Get user profile
-router.get('/profile', auth, (req, res) => {
+router.get('/profile', auth, async (req, res) => {
   try {
-    // In a real app, you'd fetch from database
-    // For now, we'll simulate user data
-    const user = {
-      id: req.userId,
-      username: `User${req.userId}`,
-      email: `user${req.userId}@example.com`,
-      createdAt: new Date('2024-01-01'),
-      profile: {
-        totalTests: 15,
-        averageWpm: 65,
-        bestWpm: 89,
-        accuracy: 96.5,
-        favoriteTestDuration: 60,
-        preferredTheme: 'dark'
-      }
-    };
-
-    res.json({ user });
-
+    // Fetch user from database
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ user: user.toJSON() });
   } catch (error) {
     console.error('Get profile error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -31,24 +19,32 @@ router.get('/profile', auth, (req, res) => {
 });
 
 // Update user profile
-router.put('/profile', auth, (req, res) => {
+router.put('/profile', auth, async (req, res) => {
   try {
-    const { username, favoriteTestDuration, preferredTheme } = req.body;
+    const { username, favoriteTestDuration, preferredTheme, firstName, lastName } = req.body;
 
-    // In a real app, you'd update the database
-    // For now, we'll just return success
+    // Update user in the database
+    const update = {};
+    if (username) update.username = username;
+    if (firstName) update.firstName = firstName;
+    if (lastName) update.lastName = lastName;
+    if (favoriteTestDuration) update.favoriteTestDuration = favoriteTestDuration;
+    if (preferredTheme) update.preferredTheme = preferredTheme;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.userId,
+      { $set: update },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     res.json({
       message: 'Profile updated successfully',
-      user: {
-        id: req.userId,
-        username: username || `User${req.userId}`,
-        profile: {
-          favoriteTestDuration: favoriteTestDuration || 60,
-          preferredTheme: preferredTheme || 'dark'
-        }
-      }
+      user: user.toJSON(),
     });
-
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Internal server error' });
