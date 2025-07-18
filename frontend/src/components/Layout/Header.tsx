@@ -39,19 +39,37 @@ const Header: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link 
-            to="/" 
-            className="flex items-center space-x-2 text-xl font-bold text-gray-900 dark:text-[#ffca8d]"
-          >
-            <div className="w-8 h-8 flex items-center justify-center">
-              <img
-                src="/Logo/icon.png"
-                alt="TurboKeys Logo"
-                className="w-8 h-8 object-contain"
-              />
-            </div>
-            <span>TurboKeys</span>
-          </Link>
+
+          <div className="flex items-center">
+            <Link 
+              to="/" 
+              className="flex items-center space-x-2 text-xl font-bold text-gray-900 dark:text-[#ffca8d]"
+            >
+              <div className="w-8 h-8 flex items-center justify-center">
+                <img
+                  src="/Logo/icon.png"
+                  alt="TurboKeys Logo"
+                  className="w-8 h-8 object-contain"
+                />
+              </div>
+              <span className="hidden sm:inline">TurboKeys</span>
+            </Link>
+            {/* Mobile Nav: show Home/Leaderboard links on mobile, hide on md+ */}
+            <nav className="flex md:hidden items-center space-x-4 ml-2">
+              <Link
+                to="/"
+                className="text-gray-600 hover:text-gray-900 dark:text-primary-300 dark:hover:text-primary-100 transition-colors text-base"
+              >
+                Home
+              </Link>
+              <Link
+                to="/leaderboard"
+                className="text-gray-600 hover:text-gray-900 dark:text-primary-300 dark:hover:text-primary-100 transition-colors text-base"
+              >
+                Leaderboard
+              </Link>
+            </nav>
+          </div>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-6">

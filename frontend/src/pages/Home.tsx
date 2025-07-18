@@ -24,6 +24,7 @@ const Home: React.FC = () => {
   const [lastErrorCount, setLastErrorCount] = useState(0);
   
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -640,40 +641,32 @@ const Home: React.FC = () => {
     }
   }, [isTestComplete, startTime, timeLeft, user, submitTestResultWithValues]);
 
-  // Responsive font size for typing area (more granular)
+  // Responsive font size for typing area (more granular, improved for mobile)
   let fontSizeClass = 'text-xl';
-  if (windowWidth < 320) fontSizeClass = 'text-[0.7rem]'; // ultra small phones
-  else if (windowWidth < 340) fontSizeClass = 'text-xs'; // very small phones
-  else if (windowWidth < 360) fontSizeClass = 'text-sm'; // small phones
-  else if (windowWidth < 375) fontSizeClass = 'text-base'; // iPhone SE
-  else if (windowWidth < 400) fontSizeClass = 'text-[1.05rem]'; // small/old phones
-  else if (windowWidth < 430) fontSizeClass = 'text-[1.1rem]'; // iPhone 14 Pro Max
+  if (windowWidth < 340) fontSizeClass = 'text-[0.8rem]'; // very small phones
+  else if (windowWidth < 375) fontSizeClass = 'text-sm'; // iPhone SE
+  else if (windowWidth < 430) fontSizeClass = 'text-base'; // iPhone 14 Pro Max
   else if (windowWidth < 480) fontSizeClass = 'text-lg'; // medium phones
   else if (windowWidth < 540) fontSizeClass = 'text-xl'; // phablets
-  else if (windowWidth < 576) fontSizeClass = 'text-lg'; // large phones/phablets
   else if (windowWidth < 640) fontSizeClass = 'text-lg'; // small tablets
-  else if (windowWidth < 720) fontSizeClass = 'text-lg'; // 7" tablets
   else if (windowWidth < 768) fontSizeClass = 'text-lg'; // tablets
-  else if (windowWidth < 900) fontSizeClass = 'text-lg'; // large tablets
-  else if (windowWidth < 1024) fontSizeClass = 'text-lg'; // small laptops
-  else if (windowWidth < 1280) fontSizeClass = 'text-xl'; // desktops
-  else if (windowWidth < 1440) fontSizeClass = 'text-1xl'; // large desktops
+  else if (windowWidth < 1024) fontSizeClass = 'text-xl'; // laptops
   else fontSizeClass = 'text-2xl';
 
   return (
     <div className="min-h-screen bg-white dark:bg-primary-900 text-gray-900 dark:text-primary-100">
-      <div className="container mx-auto px-4 py-12">
+      <div className="w-full max-w-full px-2 sm:px-4 py-6 sm:py-10 mx-auto">
         {/* Header - Clean and minimal */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-primary-700 dark:text-[#ffca8d] mb-4">
+        <div className="text-center mb-8 sm:mb-16">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary-700 dark:text-[#ffca8d] mb-4">
             TurboKeys
           </h1>
         </div>
 
         {/* Mode Selection - Clean and centered */}
         {!isTestActive && !isTestComplete && (
-          <div className="flex justify-center mb-16">
-            <div className="flex items-center space-x-6 px-6 py-3 bg-gray-100 dark:bg-primary-800 rounded-lg border border-gray-200 dark:border-primary-700">
+          <div className="flex justify-center items-center w-full mb-8 sm:mb-16">
+            <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-y-2 sm:gap-y-0 sm:space-x-6 px-2 sm:px-6 py-2 sm:py-3 bg-gray-100 dark:bg-primary-800 rounded-lg border border-gray-200 dark:border-primary-700 mx-auto max-w-xs sm:max-w-md md:max-w-2xl w-full">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600 dark:text-primary-400">⏱</span>
                 <span className="text-sm font-medium text-primary-600 dark:text-[#ffca8d]">time</span>
@@ -739,10 +732,10 @@ const Home: React.FC = () => {
         )}
 
         {/* Typing Test - Clean centered layout like MonkeyType */}
-        <div className="mx-auto px-4">
+        <div className="mx-auto px-0 sm:px-4 w-full max-w-full">
           {/* Stats Display - Show during active test */}
           {isTestActive && (
-            <div className="flex justify-center space-x-12 mb-8">
+            <div className="flex flex-wrap justify-center gap-4 sm:space-x-12 mb-4 sm:mb-8">
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{timeLeft}</div>
                 <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Time</div>
@@ -760,8 +753,7 @@ const Home: React.FC = () => {
           
           {/* Typing Area */}
           <div 
-            className="relative cursor-text w-full overflow-hidden mb-8"
-            style={{ height: '140px' }}
+            className="relative cursor-text w-full overflow-visible mb-6 sm:mb-8 min-h-[90px] sm:min-h-[120px]"
             onClick={() => {
               if (!isTestComplete && textAreaRef.current) {
                 textAreaRef.current.focus();
@@ -769,31 +761,36 @@ const Home: React.FC = () => {
             }}
           >
             <div
-              className={`max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-4 md:px-8 transition-all duration-300 ${!isTestActive && !isTestComplete ? 'blur-[1px]' : ''}`}
+              className={`max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-1 sm:px-4 md:px-8 transition-all duration-300 ${(!isTestActive && !isTestComplete && !isInputFocused) ? 'blur-[1px]' : ''}`}
               style={{ whiteSpace: 'pre-wrap', fontSize: fontSizeClass.startsWith('text-') ? undefined : fontSizeClass.replace('text-[','').replace(']','') }}
             >
-              <span className={`font-mono ${fontSizeClass}`}>
+              <span className={`font-mono ${fontSizeClass} break-words`}> {/* break-words for mobile overflow */}
                 {getCharacterDisplay()}
               </span>
             </div>
-            
-            {/* Invisible textarea for input */}
+            {/* Visible textarea for mobile accessibility */}
             <textarea
               ref={textAreaRef}
               value={userInput}
               onChange={handleInput}
-              className="absolute inset-0 w-full h-full opacity-0 resize-none outline-none"
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
+              className="absolute inset-0 w-full h-full opacity-0 resize-none outline-none z-10"
               disabled={isTestComplete}
               placeholder=""
+              tabIndex={0}
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              inputMode="text"
             />
-            
-            {/* Focus overlay */}
-            {!isTestActive && !isTestComplete && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="bg-white/90 dark:bg-primary-800/90 backdrop-blur-sm rounded-lg px-6 py-4 shadow-lg border border-gray-200 dark:border-primary-700">
+            {/* Focus overlay, pointer-events-none so textarea is always focusable */}
+            {(!isTestActive && !isTestComplete && !isInputFocused) && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-white/90 dark:bg-primary-800/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-3 sm:py-4 shadow-lg border border-gray-200 dark:border-primary-700">
                   <div className="text-center text-gray-700 dark:text-primary-200">
-                    <p className="text-lg font-medium mb-1">Click in the text area and start typing</p>
-                    <p className="text-sm opacity-75 mb-2">Selected: {selectedMode} • {selectedLanguage === 'french' ? 'Français' : 'English'}</p>
+                    <p className="text-base sm:text-lg font-medium mb-1">Click in the text area and start typing</p>
+                    <p className="text-xs sm:text-sm opacity-75 mb-2">Selected: {selectedMode} • {selectedLanguage === 'french' ? 'Français' : 'English'}</p>
                     <p className="text-xs opacity-60">Begin with the first character to start the timer</p>
                   </div>
                 </div>
@@ -808,9 +805,9 @@ const Home: React.FC = () => {
               
               {/* Performance Graph */}
               {wpmHistory.length > 0 && (
-                <div className="mb-8 bg-gray-50 dark:bg-primary-800 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Performance Over Time</h3>
-                  <div className="h-64">
+                <div className="mb-8 bg-gray-50 dark:bg-primary-800 rounded-lg p-3 sm:p-6 w-full max-w-xs sm:max-w-md mx-auto">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Performance Over Time</h3>
+                  <div className="h-48 sm:h-64 w-full min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={wpmHistory.map((wpmPoint, index) => {
                         const errorPoint = errorHistory[index];
