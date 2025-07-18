@@ -100,7 +100,7 @@ const History: React.FC = () => {
   }
 
   return (
-    <div className="h-[90vh] bg-gray-50 dark:bg-primary-900 py-8 overflow-hidden">
+    <div className="min-h-screen bg-gray-50 dark:bg-primary-900 py-8 overflow-y-auto">
       <div className="max-w-6xl mx-auto px-4 h-full flex flex-col">          <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6 flex-1 flex flex-col overflow-hidden">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
