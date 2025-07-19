@@ -805,9 +805,9 @@ const Home: React.FC = () => {
               
               {/* Performance Graph */}
               {wpmHistory.length > 0 && (
-                <div className="mb-8 bg-gray-50 dark:bg-primary-800 rounded-lg p-3 sm:p-6 w-full max-w-xs sm:max-w-md mx-auto">
+                <div className="mb-8 bg-gray-50 dark:bg-primary-800 rounded-lg p-3 sm:p-6 w-full max-w-full mx-auto px-1 sm:px-4 md:px-8">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Performance Over Time</h3>
-                  <div className="h-48 sm:h-64 w-full min-w-0">
+                  <div className="h-56 sm:h-72 md:h-80 w-full min-w-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={wpmHistory.map((wpmPoint, index) => {
                         const errorPoint = errorHistory[index];
@@ -840,7 +840,6 @@ const Home: React.FC = () => {
                             if (name === 'raw') return [`${value} Raw`, 'Raw WPM'];
                             if (name === 'accuracy') return [`${value}%`, 'Accuracy'];
                             if (name === 'errors') {
-                              // Find the actual error count for this time point
                               const dataIndex = wpmHistory.findIndex(h => h.wpm === value);
                               const actualErrors = dataIndex >= 0 && errorHistory[dataIndex] ? errorHistory[dataIndex].errors : 0;
                               return [`${actualErrors} Error${actualErrors !== 1 ? 's' : ''}`, 'Errors'];
@@ -877,7 +876,7 @@ const Home: React.FC = () => {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="flex justify-center space-x-6 mt-4 text-sm">
+                  <div className="flex flex-wrap justify-center space-x-6 mt-4 text-sm">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
                       <span className="text-gray-600 dark:text-gray-300">Net WPM</span>
