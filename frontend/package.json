@@ -32,7 +32,7 @@
     "vercel-build": "chmod +x node_modules/.bin/* && npm run build"
   },
   "engines": {
-    "node": "18.x"
+    "node": "22.x"
   },
   "eslintConfig": {
     "extends": [
