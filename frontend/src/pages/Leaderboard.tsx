@@ -39,6 +39,19 @@ const Leaderboard: React.FC = () => {
     }
   };
 
+  // --- Sorting: by score, then fewer tests, then higher accuracy ---
+  const sortedLeaderboard = [...leaderboard].sort((a, b) => {
+    const scoreA = a.bestScore ?? 0;
+    const scoreB = b.bestScore ?? 0;
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    const testCountA = a.testCount ?? Infinity;
+    const testCountB = b.testCount ?? Infinity;
+    if (testCountA !== testCountB) return testCountA - testCountB;
+    const accuracyA = a.bestAccuracy ?? a.accuracy ?? 0;
+    const accuracyB = b.bestAccuracy ?? b.accuracy ?? 0;
+    return accuracyB - accuracyA;
+  });
+
   return (
     <div className="min-h-screen bg-white dark:bg-primary-900 py-8 overflow-y-auto">
       <div className="container mx-auto px-4 h-full flex flex-col">
@@ -54,7 +67,7 @@ const Leaderboard: React.FC = () => {
           </div>
 
           {/* Mode Selection */}
-          <div className="mb-8 w-full max-w-full bg-primary-800 dark:bg-primary-800 p-3 sm:p-4">
+          <div className="mb-8 w-full max-w-full bg-gray-100 dark:bg-primary-800 p-3 sm:p-4 rounded-lg transition-colors">
             <div className="flex flex-wrap flex-row items-center gap-2 sm:gap-x-4 w-full justify-start">
               {/* Duration Selection */}
               <div className="flex items-center space-x-2">
@@ -122,9 +135,9 @@ const Leaderboard: React.FC = () => {
               <div className="flex justify-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
               </div>
-            ) : leaderboard.length > 0 ? (
+            ) : sortedLeaderboard.length > 0 ? (
               <div className="space-y-2 w-full">
-                {leaderboard.map((entry, index) => (
+                {sortedLeaderboard.map((entry, index) => (
                   <div
                     key={entry.id}
                     className={`flex flex-col sm:flex-row items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg transition-colors w-full ${
@@ -156,8 +169,16 @@ const Leaderboard: React.FC = () => {
                     </div>
                     <div className="flex flex-row sm:flex-row items-center justify-between sm:space-x-6 w-full sm:w-auto gap-2 sm:gap-0">
                       <div className="text-center w-1/3 sm:w-auto">
+                        <div className="text-base sm:text-lg font-bold text-purple-600">
+                          {entry.bestScore ?? 0}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          Score
+                        </div>
+                      </div>
+                      <div className="text-center w-1/3 sm:w-auto">
                         <div className="text-base sm:text-lg font-bold text-primary-600">
-                          {entry.bestWpm || entry.wpm}
+                          {entry.bestWpm ?? entry.wpm ?? 0}
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                           WPM
@@ -165,22 +186,12 @@ const Leaderboard: React.FC = () => {
                       </div>
                       <div className="text-center w-1/3 sm:w-auto">
                         <div className="text-base sm:text-lg font-bold text-green-600">
-                          {Math.round(entry.bestAccuracy || entry.accuracy)}%
+                          {Math.round(entry.bestAccuracy ?? entry.accuracy ?? 0)}%
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">
                           Accuracy
                         </div>
                       </div>
-                      {entry.bestScore && (
-                        <div className="text-center w-1/3 sm:w-auto">
-                          <div className="text-base sm:text-lg font-bold text-purple-600">
-                            {entry.bestScore}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
-                            Score
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 ))}
