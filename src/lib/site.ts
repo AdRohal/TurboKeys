@@ -1,5 +1,5 @@
 /** One place for the public address and wording that search engines and social cards read. */
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://turbokeys.vercel.app").replace(/\/$/, "");
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://turbo-keys.vercel.app").replace(/\/$/, "");
 export const SITE_NAME = "TurboKeys";
 export const SITE_TITLE = "TurboKeys - Free Typing Speed Test (WPM & Accuracy)";
 export const SITE_DESCRIPTION =
