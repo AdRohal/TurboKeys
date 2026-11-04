@@ -18,7 +18,9 @@ module.exports = {
           700: '#5a3e67',
           800: '#4b3355',
           900: '#371931',
+          950: '#25101f',
         },
+        ember: { 200: '#ffe3c4', 300: '#ffca8d', 400: '#f5b06a' },
         dark: {
           100: '#1f2937',
           200: '#374151',
@@ -32,7 +34,12 @@ module.exports = {
         }
       },
       fontFamily: {
-        'mono': ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'Consolas', 'monospace'],
+      },
+      boxShadow: {
+        panel: '0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 18px 40px -18px rgb(10 2 12 / 0.7)',
+        lift: '0 10px 24px -12px rgb(10 2 12 / 0.55)',
       },
       animation: {
         'typing': 'typing 0.5s ease-in-out infinite alternate',

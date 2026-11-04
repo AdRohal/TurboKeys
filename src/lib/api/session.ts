@@ -14,7 +14,9 @@ export const badRequest = (error: string) => Response.json({ error }, { status: 
 
 /** Logs the real cause on the server and gives the browser a plain message. */
 export function serverError(where: string, cause: unknown) {
-  console.error(`[api] ${where}:`, cause);
+  // a Supabase error is an Error subclass, which prints as {} unless its fields are read out
+  const c = cause as { message?: string; code?: string; details?: string; hint?: string } | null;
+  console.error(`[api] ${where}:`, c && typeof c === "object" ? { code: c.code, message: c.message, details: c.details, hint: c.hint } : cause);
   return Response.json({ error: "Something went wrong. Please try again." }, { status: 500 });
 }
 

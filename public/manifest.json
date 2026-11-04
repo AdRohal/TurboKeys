@@ -1,21 +1,28 @@
 {
   "short_name": "TurboKeys",
   "name": "TurboKeys - Typing Speed Test",
-  "description": "A modern typing speed test application",
+  "description": "Free typing speed test with live WPM, accuracy and a global leaderboard",
   "icons": [
     {
-      "src": "Logo/icon.png",
+      "src": "/Logo/icon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "Logo/icon.ico",
+      "src": "/Logo/icon.ico",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/x-icon"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#3B82F6",
-  "background_color": "#ffffff"
+  "theme_color": "#371931",
+  "background_color": "#371931",
+  "id": "/",
+  "scope": "/",
+  "categories": [
+    "education",
+    "games"
+  ]
 }

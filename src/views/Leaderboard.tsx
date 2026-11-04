@@ -1,47 +1,123 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { typingAPI } from '../services/api';
+import { Link } from '@/lib/router';
+import { mathAPI, typingAPI, MathBoardEntry } from '../services/api';
 import { LeaderboardEntry } from '../types';
 
+type Board = 'typing' | 'math';
+
+function Group<T extends string | number>({ label, values, current, set, suffix = '' }: { label: string; values: T[]; current: T; set: (v: T) => void; suffix?: string }) {
+  return (
+    <div role="group" aria-label={label} className="flex items-center gap-2">
+      <span className="text-sm text-primary-600 dark:text-primary-400">{label}</span>
+      <div className="segmented">
+        {values.map((v) => (
+          <button key={v} type="button" className="segment capitalize" aria-pressed={current === v} onClick={() => set(v)}>
+            {v}
+            {suffix}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const th = 'py-3 px-3 text-center font-medium';
+const rowClass = (top: boolean) =>
+  `border-b border-primary-100 last:border-0 transition-colors hover:bg-primary-50 dark:border-ember-300/5 dark:hover:bg-ember-300/5 ${top ? 'bg-primary-50/60 dark:bg-ember-300/[0.04]' : ''}`;
+
+const Rank: React.FC<{ n: number }> = ({ n }) => (
+  <span className={`mx-auto grid h-8 w-8 place-items-center rounded-md text-sm font-bold tabular ${n <= 3 ? 'bg-primary-600 text-white dark:bg-ember-300 dark:text-primary-950' : 'text-primary-600 dark:text-primary-400'}`}>{n}</span>
+);
+
+const Player: React.FC<{ name: string; sub: string }> = ({ name, sub }) => (
+  <div className="flex items-center gap-3">
+    <span aria-hidden="true" className="hidden sm:grid h-9 w-9 place-items-center rounded-full border border-primary-200 text-sm font-semibold text-primary-700 dark:border-ember-300/20 dark:text-ember-300">
+      {name.charAt(0).toUpperCase()}
+    </span>
+    <div className="min-w-0">
+      <div className="truncate font-medium text-primary-950 dark:text-ember-200">{name}</div>
+      <div className="text-xs text-primary-600 dark:text-primary-400">{sub}</div>
+    </div>
+  </div>
+);
+
+const Loading = () => (
+  <div className="space-y-px p-1" role="status" aria-label="Loading leaderboard">
+    {Array.from({ length: 8 }).map((_, i) => (
+      <div key={i} className="h-14 animate-pulse rounded-md bg-primary-100/70 dark:bg-ember-300/5" />
+    ))}
+  </div>
+);
+
+const Empty: React.FC<{ title: string; body: string; to: string; cta: string }> = ({ title, body, to, cta }) => (
+  <div className="px-6 py-16 text-center">
+    <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">{title}</h2>
+    <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">{body}</p>
+    <Link to={to} className="btn-primary mt-6">
+      {cta}
+    </Link>
+  </div>
+);
+
 const Leaderboard: React.FC = () => {
+  const [board, setBoard] = useState<Board>('typing');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [mathBoard, setMathBoard] = useState<MathBoardEntry[]>([]);
   const [selectedDuration, setSelectedDuration] = useState<number>(30);
   const [selectedMode, setSelectedMode] = useState<string>('time');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [failMessage, setFailMessage] = useState('');
 
+  // /leaderboard?board=math opens the math board (the game links here after a saved round)
   useEffect(() => {
-    const loadLeaderboard = async () => {
-      try {
-        setLoading(true);
-        const data = await typingAPI.getLeaderboard(selectedDuration, selectedMode, selectedLanguage, 50);
-        setLeaderboard(data);
-      } catch (error) {
-        console.error('Failed to load leaderboard:', error);
-        setLeaderboard([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (new URLSearchParams(window.location.search).get('board') === 'math') setBoard('math');
+  }, []);
 
-    loadLeaderboard();
-  }, [selectedDuration, selectedMode, selectedLanguage]);
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return '🥇';
-      case 2:
-        return '🥈';
-      case 3:
-        return '🥉';
-      default:
-        return `#${rank}`;
+  const chooseBoard = (b: Board) => {
+    setBoard(b);
+    try {
+      window.history.replaceState(null, '', b === 'math' ? '/leaderboard?board=math' : '/leaderboard');
+    } catch {
+      /* the address bar is only a convenience */
     }
   };
 
-  // --- Sorting: by score, then fewer tests, then higher accuracy ---
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setFailed(false);
+      setFailMessage('');
+      try {
+        if (board === 'typing') {
+          const data = await typingAPI.getLeaderboard(selectedDuration, selectedMode, selectedLanguage, 50);
+          if (!cancelled) setLeaderboard(data);
+        } else {
+          const data = await mathAPI.getLeaderboard(50);
+          if (!cancelled) setMathBoard(data);
+        }
+      } catch (error) {
+        console.error('Failed to load leaderboard:', error);
+        if (!cancelled) {
+          setFailed(true);
+          setFailMessage(error instanceof Error ? error.message : '');
+          if (board === 'typing') setLeaderboard([]);
+          else setMathBoard([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [board, selectedDuration, selectedMode, selectedLanguage]);
+
+  // by score, then fewer tests, then higher accuracy
   const sortedLeaderboard = [...leaderboard].sort((a, b) => {
     const scoreA = a.bestScore ?? 0;
     const scoreB = b.bestScore ?? 0;
@@ -54,162 +130,111 @@ const Leaderboard: React.FC = () => {
     return accuracyB - accuracyA;
   });
 
+  const isMath = board === 'math';
+
   return (
-    <div className="min-h-screen bg-white dark:bg-primary-900 py-8 overflow-y-auto">
-      <div className="container mx-auto px-4 h-full flex flex-col">
-        <div className="max-w-4xl mx-auto flex-1 flex flex-col">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-[#ffca8d] mb-2">
-              Leaderboard
-            </h1>
-            <p className="text-gray-600 dark:text-primary-400">
-              See how you rank against other typists
-            </p>
-          </div>
+    <div className="min-h-screen py-10 sm:py-14">
+      <div className="mx-auto max-w-6xl px-4 sm:px-8 text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">Leaderboard</h1>
+        <p className="mx-auto mt-3 max-w-prose text-primary-700 dark:text-primary-300">
+          {isMath
+            ? 'The sharpest minds on TurboKeys, ranked by their best 60 second Fast thinking round.'
+            : 'The fastest typists on TurboKeys, ranked by score. Pick a test length to see who leads it.'}
+        </p>
 
-          {/* Mode Selection */}
-          <div className="mb-8 w-full max-w-full bg-gray-100 dark:bg-primary-800 p-3 sm:p-4 rounded-lg transition-colors">
-            <div className="flex flex-wrap flex-row items-center gap-2 sm:gap-x-4 w-full justify-start">
-              {/* Duration Selection */}
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Duration:
-                </label>
-                {[15, 30, 60, 120].map((duration) => (
-                  <button
-                    key={duration}
-                    onClick={() => setSelectedDuration(duration)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                      selectedDuration === duration
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {duration}s
-                  </button>
-                ))}
-              </div>
-              {/* Mode Selection */}
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Mode:
-                </label>
-                {['time', 'words'].map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setSelectedMode(mode)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
-                      selectedMode === mode
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-              {/* Language Selection */}
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Language:
-                </label>
-                {['english', 'french'].map((language) => (
-                  <button
-                    key={language}
-                    onClick={() => setSelectedLanguage(language)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
-                      selectedLanguage === language
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {language}
-                  </button>
-                ))}
-              </div>
+        <div className="mt-8 flex justify-center">
+          <div role="group" aria-label="Leaderboard" className="segmented">
+            <button type="button" className="segment" aria-pressed={!isMath} onClick={() => chooseBoard('typing')}>
+              Keyboard typing
+            </button>
+            <button type="button" className="segment" aria-pressed={isMath} onClick={() => chooseBoard('math')}>
+              Fast thinking
+            </button>
+          </div>
+        </div>
+
+        {!isMath && (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+            <Group label="Duration" values={[15, 30, 60, 120]} current={selectedDuration} set={setSelectedDuration} suffix="s" />
+            <Group label="Mode" values={['time', 'words']} current={selectedMode} set={setSelectedMode} />
+            <Group label="Language" values={['english', 'french']} current={selectedLanguage} set={setSelectedLanguage} />
+          </div>
+        )}
+
+        <div className="card mt-6 overflow-hidden" aria-busy={loading}>
+          {loading ? (
+            <Loading />
+          ) : failed ? (
+            <div className="px-6 py-16 text-center" role="alert">
+              <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">The leaderboard did not load</h2>
+              <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">{failMessage || 'Check your connection and reload the page to try again.'}</p>
             </div>
-          </div>
-
-          {/* Leaderboard */}
-          <div className="card p-2 sm:p-6 w-full max-w-full">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-              </div>
-            ) : sortedLeaderboard.length > 0 ? (
-              <div className="space-y-2 w-full">
-                {sortedLeaderboard.map((entry, index) => (
-                  <div
-                    key={entry.id}
-                    className={`flex flex-col sm:flex-row items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg transition-colors w-full ${
-                      index < 3
-                        ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 border border-yellow-200 dark:border-yellow-800'
-                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto">
-                      <div className="text-lg sm:text-xl font-bold min-w-[2.5rem] sm:min-w-[3rem]">
-                        {getRankIcon(index + 1)}
-                      </div>
-                      <div className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-primary-600 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs sm:text-sm font-bold">
-                            {(entry.user?.username || entry.username || 'U').charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-gray-100 text-sm sm:text-base">
-                            {entry.user?.username || entry.username || 'Unknown User'}
-                          </div>
-                          <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-                            {entry.testCount ? `${entry.testCount} tests` : 
-                             entry.completedAt ? new Date(entry.completedAt).toLocaleDateString() : 'New racer'}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-row sm:flex-row items-center justify-between sm:space-x-6 w-full sm:w-auto gap-2 sm:gap-0">
-                      <div className="text-center w-1/3 sm:w-auto">
-                        <div className="text-base sm:text-lg font-bold text-purple-600">
-                          {entry.bestScore ?? 0}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          Score
-                        </div>
-                      </div>
-                      <div className="text-center w-1/3 sm:w-auto">
-                        <div className="text-base sm:text-lg font-bold text-primary-600">
-                          {entry.bestWpm ?? entry.wpm ?? 0}
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          WPM
-                        </div>
-                      </div>
-                      <div className="text-center w-1/3 sm:w-auto">
-                        <div className="text-base sm:text-lg font-bold text-green-600">
-                          {Math.round(entry.bestAccuracy ?? entry.accuracy ?? 0)}%
-                        </div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">
-                          Accuracy
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          ) : isMath ? (
+            mathBoard.length > 0 ? (
+              <table className="w-full text-center">
+                <caption className="sr-only">Top Fast thinking players by best round</caption>
+                <thead>
+                  <tr className="border-b border-primary-200 text-xs text-primary-600 dark:border-ember-300/10 dark:text-primary-400">
+                    <th scope="col" className="w-16 py-3 pl-4 text-center font-medium">Rank</th>
+                    <th scope="col" className="py-3 text-left font-medium">Player</th>
+                    <th scope="col" className={th}>Points</th>
+                    <th scope="col" className={`hidden sm:table-cell ${th}`}>Right answers</th>
+                    <th scope="col" className={`hidden sm:table-cell ${th}`}>Accuracy</th>
+                    <th scope="col" className={th}>Best streak</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {mathBoard.map((e, i) => (
+                    <tr key={e.id} className={rowClass(i < 3)}>
+                      <td className="py-3 pl-4 text-center"><Rank n={i + 1} /></td>
+                      <td className="py-3 text-left">
+                        <Player name={e.username} sub={`${e.roundCount} ${e.roundCount === 1 ? 'round' : 'rounds'}`} />
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-semibold tabular text-primary-950 dark:text-ember-300">{e.bestPoints}</td>
+                      <td className="hidden sm:table-cell py-3 px-3 text-center font-mono tabular text-primary-800 dark:text-primary-200">{e.bestCorrect}</td>
+                      <td className="hidden sm:table-cell py-3 px-3 text-center font-mono tabular text-primary-800 dark:text-primary-200">{e.bestAccuracy}%</td>
+                      <td className="py-3 px-3 text-center font-mono tabular text-primary-800 dark:text-primary-200">{e.bestStreak}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : (
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-xl font-medium text-gray-900 dark:text-gray-100 mb-2">
-                  No results yet
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Be the first to complete a test in this mode!
-                </p>
-              </div>
-            )}
-          </div>
+              <Empty title="No rounds yet" body="Play a 60 second round while signed in and your score will open the board." to="/fast-thinking" cta="Play Fast thinking" />
+            )
+          ) : sortedLeaderboard.length > 0 ? (
+            <table className="w-full text-center">
+              <caption className="sr-only">
+                Top typists for a {selectedDuration} second {selectedMode} test in {selectedLanguage}
+              </caption>
+              <thead>
+                <tr className="border-b border-primary-200 text-xs text-primary-600 dark:border-ember-300/10 dark:text-primary-400">
+                  <th scope="col" className="w-16 py-3 pl-4 text-center font-medium">Rank</th>
+                  <th scope="col" className="py-3 text-left font-medium">Typist</th>
+                  <th scope="col" className={th}>Score</th>
+                  <th scope="col" className={th}>WPM</th>
+                  <th scope="col" className={`hidden sm:table-cell ${th}`}>Accuracy</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedLeaderboard.map((entry, index) => {
+                  const name = entry.user?.username || entry.username || 'Unknown user';
+                  return (
+                    <tr key={entry.id} className={rowClass(index < 3)}>
+                      <td className="py-3 pl-4 text-center"><Rank n={index + 1} /></td>
+                      <td className="py-3 text-left">
+                        <Player name={name} sub={entry.testCount ? `${entry.testCount} tests` : entry.completedAt ? new Date(entry.completedAt).toLocaleDateString() : 'New typist'} />
+                      </td>
+                      <td className="py-3 px-3 text-center font-mono font-semibold tabular text-primary-950 dark:text-ember-300">{entry.bestScore ?? 0}</td>
+                      <td className="py-3 px-3 text-center font-mono tabular text-primary-800 dark:text-primary-200">{entry.bestWpm ?? entry.wpm ?? 0}</td>
+                      <td className="hidden sm:table-cell py-3 px-3 text-center font-mono tabular text-primary-800 dark:text-primary-200">{Math.round(entry.bestAccuracy ?? entry.accuracy ?? 0)}%</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <Empty title="No results for this test yet" body={`Take a ${selectedDuration} second test while signed in and your score will open the board.`} to="/" cta="Start a test" />
+          )}
         </div>
       </div>
     </div>

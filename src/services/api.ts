@@ -64,6 +64,32 @@ export const typingAPI = {
   deleteTest: (id: string) => send<{ message: string }>('DELETE', `/typing-tests/${id}`),
 };
 
+export interface MathBoardEntry {
+  id: string;
+  username: string;
+  avatar: string | null;
+  bestPoints: number;
+  bestCorrect: number;
+  bestAccuracy: number;
+  bestStreak: number;
+  roundCount: number;
+  latestRound: string;
+}
+
+export interface MathRoundInput {
+  points: number;
+  correct: number;
+  wrong: number;
+  bestStreak: number;
+  avgAnswerMs: number;
+  level: number;
+}
+
+export const mathAPI = {
+  submitRound: (round: MathRoundInput) => send<{ id: string; points: number }>('POST', '/math-rounds', round as unknown as Json),
+  getLeaderboard: (limit = 50) => get<MathBoardEntry[]>(`/math-rounds/leaderboard${qs({ limit })}`),
+};
+
 export const userAPI = {
   updateProfile: (data: Partial<Pick<User, 'firstName' | 'lastName' | 'username'>>) => send<{ message: string; user: User }>('PUT', '/users/profile', data as Json).then((r) => r.user),
   getUserStats: () => get<Record<string, number>>('/users/stats'),

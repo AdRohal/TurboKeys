@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { ComposedChart, Area, Line, ReferenceDot, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TestMode, Language } from '../types';
 import { typingAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { generateTypingText } from '../lib/typing/words';
+
+const FONT_STEP_MIN = -3;
+const FONT_STEP_MAX = 4;
 
 const Home: React.FC = () => {
   const { user } = useAuth();
@@ -28,6 +32,8 @@ const Home: React.FC = () => {
   // the server has no window: start at a desktop width and read the real one as soon as the page is in the browser
   const [windowWidth, setWindowWidth] = useState(1280);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const textBoxRef = useRef<HTMLDivElement>(null);
+  const [boxWidth, setBoxWidth] = useState(0);
   
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -40,6 +46,39 @@ const Home: React.FC = () => {
   const correctCharsRef = useRef<number>(0);
   const wpmRef = useRef<number>(0);
   const accuracyRef = useRef<number>(100);
+
+  // Font size: step 0 is the default for this screen. Each step is 2px, and the choice is remembered.
+  const [fontStep, setFontStep] = useState(0);
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem('typingFontStep'));
+      if (Number.isInteger(saved) && saved >= FONT_STEP_MIN && saved <= FONT_STEP_MAX) setFontStep(saved);
+    } catch {
+      /* private mode: the default size is fine */
+    }
+  }, []);
+  const changeFont = (delta: number) => {
+    setFontStep((prev) => {
+      const next = Math.min(FONT_STEP_MAX, Math.max(FONT_STEP_MIN, prev + delta));
+      try {
+        localStorage.setItem('typingFontStep', String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+  const baseFontPx = windowWidth < 480 ? 17 : windowWidth < 768 ? 19 : windowWidth < 1024 ? 22 : 26;
+  const fontPx = Math.max(12, baseFontPx + fontStep * 2);
+
+  // line length follows the real width of the text box, so no line is ever cut off
+  useEffect(() => {
+    const el = textBoxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setBoxWidth(entry.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Listen for window resize
   useEffect(() => {
@@ -55,30 +94,10 @@ const Home: React.FC = () => {
     };
   }, []);
 
-  // Sample texts for different languages - Multiple paragraphs for variety
-  const sampleTexts = useCallback(() => ({
-    english: [
-      "The art of communication has evolved dramatically throughout human history, transforming from simple gestures and sounds into sophisticated systems of written and spoken language. In today's digital age, the ability to type quickly and accurately has become an essential skill for personal and professional success. Whether you're writing emails, creating documents, programming software, or engaging in online conversations, your typing speed and accuracy directly impact your productivity and effectiveness. The development of muscle memory through consistent practice allows your fingers to move automatically across the keyboard, reducing the cognitive load required for typing and freeing your mind to focus on the content and ideas you want to express. Modern typing techniques emphasize proper posture, correct finger placement, and smooth, rhythmic keystrokes that minimize fatigue and maximize efficiency.",
-      "Technology has revolutionized the way we work, learn, and connect with others across the globe. From artificial intelligence and machine learning to virtual reality and blockchain, innovative solutions are reshaping industries and creating new opportunities for growth and collaboration. The rapid pace of technological advancement requires continuous learning and adaptation, as professionals must stay current with emerging trends and tools. Digital literacy has become as fundamental as traditional reading and writing skills, enabling individuals to navigate complex information systems and participate fully in the modern economy. Social media platforms, cloud computing services, and mobile applications have transformed how we share information, conduct business, and maintain relationships.",
-      "The natural world offers countless lessons about resilience, adaptation, and interconnectedness that can inspire and guide human behavior. Ecosystems demonstrate remarkable balance and efficiency, with each species playing a crucial role in maintaining environmental stability. Climate change and environmental degradation pose significant challenges that require collective action and innovative solutions from governments, businesses, and individuals. Sustainable practices, renewable energy sources, and conservation efforts are essential for preserving biodiversity and ensuring a healthy planet for future generations. Scientific research continues to reveal the intricate relationships between organisms and their environments, highlighting the importance of protecting natural habitats and reducing human impact on delicate ecological systems.",
-      "Education serves as the foundation for personal growth, critical thinking, and societal progress, empowering individuals to reach their full potential and contribute meaningfully to their communities. The traditional classroom model is evolving to incorporate online learning, interactive technologies, and personalized instruction that accommodates diverse learning styles and schedules. Lifelong learning has become increasingly important as career paths become more dynamic and skills requirements change rapidly in response to technological and economic shifts. Educators are exploring innovative teaching methods, collaborative projects, and real-world applications to engage students and prepare them for success in an interconnected global society.",
-      "The power of creativity and imagination drives innovation, artistic expression, and problem-solving across all aspects of human endeavor. Whether through literature, music, visual arts, or scientific discovery, creative thinking challenges conventional wisdom and opens new possibilities for understanding and improving the world around us. Collaborative creativity, where diverse perspectives and expertise combine to generate novel solutions, has proven particularly effective in addressing complex challenges that require multidisciplinary approaches. The creative process involves risk-taking, experimentation, and the willingness to learn from failure, qualities that are essential for personal and professional development in an uncertain and rapidly changing environment."
-    ],
-    french: [
-      "L'évolution de la technologie moderne a transformé notre façon de communiquer, de travailler et d'interagir avec le monde qui nous entoure. Dans cette ère numérique, la maîtrise du clavier est devenue une compétence fondamentale qui influence directement notre productivité et notre efficacité professionnelle. La France, avec sa riche tradition littéraire et culturelle, a toujours valorisé l'expression écrite comme un art noble et raffiné. Aujourd'hui, cette tradition se prolonge dans le domaine numérique, où la capacité à taper rapidement et précisément en français constitue un atout considérable pour les étudiants, les professionnels et les créateurs de contenu. Les particularités de la langue française, avec ses accents, ses cédilles et ses caractères spéciaux, exigent une attention particulière lors de l'apprentissage de la dactylographie.",
-      "La culture française rayonne dans le monde entier à travers sa gastronomie, son art, sa littérature et son cinéma, créant des liens durables entre les peuples et enrichissant le patrimoine mondial de l'humanité. Les chefs français ont révolutionné l'art culinaire en développant des techniques sophistiquées et en valorisant la qualité des ingrédients locaux et saisonniers. Les musées français, notamment le Louvre, Orsay et le Centre Pompidou, abritent des collections exceptionnelles qui attirent des millions de visiteurs chaque année et contribuent au rayonnement culturel du pays. La langue française, parlée sur cinq continents, demeure un vecteur privilégié d'échanges diplomatiques, scientifiques et artistiques entre les nations francophones.",
-      "L'innovation technologique française se distingue par son approche humaniste et son engagement envers le développement durable, plaçant l'éthique et la responsabilité sociale au cœur des avancées scientifiques. Les startups françaises excellent dans des domaines variés comme l'intelligence artificielle, la biotechnologie, l'énergie renouvelable et la mobilité urbaine. Le système éducatif français forme des ingénieurs et des chercheurs reconnus internationalement pour leur rigueur méthodologique et leur capacité d'innovation. Les pôles de compétitivité régionaux favorisent la collaboration entre universités, centres de recherche et entreprises, créant un écosystème propice à l'émergence de solutions innovantes pour relever les défis contemporains.",
-      "L'histoire de France témoigne d'une longue tradition de résistance, de révolution et de progrès social qui continue d'inspirer les mouvements démocratiques dans le monde entier. Les idéaux de liberté, d'égalité et de fraternité proclamés lors de la Révolution française restent des références universelles pour les sociétés en quête de justice et de dignité humaine. Le système de protection sociale français, avec ses prestations familiales, son assurance maladie universelle et ses retraites solidaires, constitue un modèle envié qui concilie efficacité économique et cohésion sociale. La laïcité à la française offre un cadre unique pour garantir la liberté de conscience tout en préservant l'unité républicaine dans le respect de la diversité des convictions.",
-      "L'art de vivre français privilégie l'équilibre entre travail et loisirs, accordant une importance particulière aux plaisirs simples de l'existence comme les repas partagés, les promenades dans la nature et les conversations enrichissantes. Cette philosophie de vie valorise la qualité plutôt que la quantité, encourageant une approche réfléchie de la consommation et des relations humaines. Les marchés français, avec leurs produits locaux et leurs producteurs passionnés, incarnent cette quête d'authenticité et de proximité qui caractérise l'identité française. La préservation du patrimoine architectural et naturel reflète l'attachement profond des Français à leur histoire et à leur environnement, transmettant aux générations futures un héritage d'une richesse exceptionnelle."
-    ]
-  }), []);
-
-  // Get random text for the selected language
-  const getRandomText = useCallback((language: Language): string => {
-    const texts = sampleTexts()[language];
-    const randomIndex = Math.floor(Math.random() * texts.length);
-    return texts[randomIndex];
-  }, [sampleTexts]);
+  // A new text is generated for every test (see lib/typing/words.ts)
+  const getRandomText = useCallback((language: Language, durationSeconds: number): string => {
+    return generateTypingText(language === Language.FRENCH ? 'french' : 'english', durationSeconds);
+  }, []);
 
   // Get test duration
   const getTestDuration = useCallback((mode: TestMode): number => {
@@ -109,7 +128,7 @@ const Home: React.FC = () => {
       timerRef.current = null;
     }
     
-    setDisplayText(getRandomText(selectedLanguage));
+    setDisplayText(getRandomText(selectedLanguage, newTimeLeft));
     setIsTestActive(false);
     setIsTestComplete(false);
     setUserInput('');
@@ -248,7 +267,7 @@ const Home: React.FC = () => {
     setTimeLeft(newTimeLeft);
     
     // Select a new random text
-    setDisplayText(getRandomText(selectedLanguage));
+    setDisplayText(getRandomText(selectedLanguage, newTimeLeft));
   };
 
   // Handle input
@@ -376,27 +395,9 @@ const Home: React.FC = () => {
     // < 430px: iPhone 14 Pro Max, < 480px: medium phones, < 540px: phablets, < 576px: large phones/phablets
     // < 640px: small tablets, < 720px: 7" tablets, < 768px: tablets, < 820px: iPad Mini, < 900px: large tablets
     // < 1024px: small laptops, < 1152px: Chromebook, < 1280px: desktops, < 1366px: common laptops, < 1440px: large desktops, else: ultra-wide
-    const maxLineLength = windowWidth < 320 ? 18 // ultra small phones
-      : windowWidth < 340 ? 20 // very small phones
-      : windowWidth < 360 ? 22 // small phones
-      : windowWidth < 375 ? 24 // iPhone SE
-      : windowWidth < 400 ? 28 // small/old phones
-      : windowWidth < 430 ? 30 // iPhone 14 Pro Max
-      : windowWidth < 480 ? 32 // medium phones
-      : windowWidth < 540 ? 36 // phablets
-      : windowWidth < 576 ? 40 // large phones/phablets
-      : windowWidth < 640 ? 48 // small tablets
-      : windowWidth < 720 ? 52 // 7" tablets
-      : windowWidth < 768 ? 55 // tablets
-      : windowWidth < 820 ? 58 // iPad Mini
-      : windowWidth < 900 ? 62 // large tablets
-      : windowWidth < 1024 ? 70 // small laptops
-      : windowWidth < 1152 ? 75 // Chromebook
-      : windowWidth < 1280 ? 80 // desktops
-      : windowWidth < 1366 ? 70 // common laptops
-      : windowWidth < 1440 ? 75 // large desktops
-      : 100; // ultra-wide screens
-    
+    // JetBrains Mono is 0.6em wide; one column is kept for the space that ends each line
+    const maxLineLength = boxWidth > 0 ? Math.max(12, Math.floor(boxWidth / (fontPx * 0.6)) - 2) : 40;
+
     // Split text into words and reconstruct with proper spacing
     const words = displayText.split(' ');
     const lines: string[] = [];
@@ -467,7 +468,7 @@ const Home: React.FC = () => {
     return visibleLines.map((lineData, displayIndex) => {
       if (lineData.text === '') {
         return (
-          <div key={`empty-${displayIndex}`} className="h-[2rem] flex items-center justify-center">
+          <div key={`empty-${displayIndex}`} className="h-[2.75rem] flex items-center justify-center">
             <span className="text-transparent">.</span>
           </div>
         );
@@ -483,16 +484,16 @@ const Home: React.FC = () => {
       
       const lineElements = lineData.text.split('').map((char: string, charIndex: number) => {
         const globalIndex = startIndex + charIndex;
-        let className = 'text-gray-400 dark:text-primary-300'; // Default untyped
+        let className = 'text-primary-500 dark:text-primary-300/75'; // Default untyped
         
         if (globalIndex < userInput.length) {
           if (userInput[globalIndex] === displayText[globalIndex]) {
-            className = 'text-gray-900 dark:text-[#ffca8d]';
+            className = 'text-primary-950 dark:text-ember-200';
           } else {
-            className = 'text-red-500 bg-red-100 dark:text-red-400 dark:bg-red-900/30';
+            className = 'text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-500/15 rounded-sm';
           }
         } else if (globalIndex === currentIndex && isTestActive) {
-          className = 'bg-primary-600 text-white';
+          className = 'bg-primary-600 text-white dark:bg-ember-300 dark:text-primary-950 rounded-sm';
         }
         
         // Handle space characters specifically to make them visible
@@ -511,8 +512,16 @@ const Home: React.FC = () => {
         );
       });
       
+      if (lineData.originalIndex < lines.length - 1) {
+        const gi = startIndex + lineData.text.length;
+        let cls = 'text-primary-500 dark:text-primary-300/75';
+        if (gi < userInput.length) cls = userInput[gi] === displayText[gi] ? 'text-primary-950 dark:text-ember-200' : 'bg-red-500/20 rounded-sm';
+        else if (gi === currentIndex && isTestActive) cls = 'bg-primary-600 dark:bg-ember-300 rounded-sm';
+        lineElements.push(<span key={gi} className={cls}>{' '}</span>);
+      }
+
       return (
-        <div key={displayIndex} className="h-[2rem] flex items-center justify-center whitespace-nowrap">
+        <div key={displayIndex} className="h-[2.75rem] flex items-center justify-center whitespace-nowrap">
           {lineElements}
         </div>
       );
@@ -646,6 +655,37 @@ const Home: React.FC = () => {
   }, [isTestComplete, startTime, timeLeft, user, submitTestResultWithValues]);
 
   // Responsive font size for typing area (more granular, improved for mobile)
+  // One point per second: points are recorded on every key press, so keep the last one in each second.
+  const chartData = (() => {
+    const bySecond = new Map<number, { time: number; wpm: number; raw: number; accuracy: number; errors: number }>();
+    wpmHistory.forEach((p, i) => {
+      const sec = Math.round(p.time);
+      const newErrors = Math.max(0, errorHistory[i]?.errors ?? 0);
+      const prev = bySecond.get(sec);
+      bySecond.set(sec, { time: sec, wpm: p.wpm, raw: p.raw, accuracy: p.accuracy, errors: (prev?.errors ?? 0) + newErrors });
+    });
+    return Array.from(bySecond.values()).sort((a, b) => a.time - b.time);
+  })();
+
+  // Consistency: how even your speed was from second to second (100 is perfectly steady)
+  const consistency = (() => {
+    const speeds: number[] = [];
+    for (let i = 1; i < chartData.length; i++) {
+      const a = chartData[i - 1];
+      const b = chartData[i];
+      const chars = (b.raw * b.time) / 5 - (a.raw * a.time) / 5;
+      const dt = b.time - a.time;
+      if (dt > 0) speeds.push(Math.max(0, (chars / dt) * 12));
+    }
+    if (speeds.length < 3) return 0;
+    const mean = speeds.reduce((x, y) => x + y, 0) / speeds.length;
+    if (mean === 0) return 0;
+    const sd = Math.sqrt(speeds.reduce((x, y) => x + (y - mean) ** 2, 0) / speeds.length);
+    return Math.max(0, Math.min(100, Math.round(100 - (sd / mean) * 50)));
+  })();
+  const testSeconds = getTestDuration(selectedMode);
+  const rawOverall = totalChars > 0 ? Math.round(totalChars / 5 / (testSeconds / 60)) : 0;
+
   let fontSizeClass = 'text-xl';
   if (windowWidth < 340) fontSizeClass = 'text-[0.8rem]'; // very small phones
   else if (windowWidth < 375) fontSizeClass = 'text-sm'; // iPhone SE
@@ -658,79 +698,87 @@ const Home: React.FC = () => {
   else fontSizeClass = 'text-2xl';
 
   return (
-    <div className="min-h-screen bg-white dark:bg-primary-900 text-gray-900 dark:text-primary-100">
-      <div className="w-full max-w-full px-2 sm:px-4 py-6 sm:py-10 mx-auto">
-        {/* Header - Clean and minimal */}
-        <div className="text-center mb-8 sm:mb-16">
-          <h1 className="text-3xl sm:text-4xl font-bold text-primary-700 dark:text-[#ffca8d] mb-4">
-            TurboKeys
+    <div className="min-h-screen text-primary-950 dark:text-primary-100">
+      <div className="w-full max-w-7xl px-4 sm:px-8 py-8 sm:py-14 mx-auto">
+        <div className="mx-auto max-w-3xl text-center mb-8 sm:mb-12">
+          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">
+            How fast can you type?
           </h1>
+          <p className="mx-auto mt-4 max-w-xl text-base sm:text-lg text-primary-700 dark:text-primary-300">
+            A free typing speed test. Pick a length, start typing, and watch your words per minute and accuracy update live.
+          </p>
         </div>
 
-        {/* Mode Selection - Clean and centered */}
         {!isTestActive && !isTestComplete && (
-          <div className="flex justify-center items-center w-full mb-8 sm:mb-16">
-            <div className="flex flex-col sm:flex-row flex-wrap justify-center items-center gap-y-2 sm:gap-y-0 sm:space-x-6 px-2 sm:px-6 py-2 sm:py-3 bg-gray-100 dark:bg-primary-800 rounded-lg border border-gray-200 dark:border-primary-700 mx-auto max-w-xs sm:max-w-md md:max-w-2xl w-full">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600 dark:text-primary-400">⏱</span>
-                <span className="text-sm font-medium text-primary-600 dark:text-[#ffca8d]">time</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="text-sm text-gray-600 dark:text-primary-400">⚠</span>
-                <div className="flex space-x-1">
-                  { [
-                    { mode: TestMode.FIFTEEN_SECONDS, label: '15' },
-                    { mode: TestMode.THIRTY_SECONDS, label: '30' },
-                    { mode: TestMode.SIXTY_SECONDS, label: '60' },
-                    { mode: TestMode.ONE_TWENTY_SECONDS, label: '120' }
-                  ].map(({ mode, label }) => (
-                    <button
-                      key={mode}
-                      onClick={() => {
-                        if (!isTestActive && !isTestComplete) {
-                          setSelectedMode(mode);
-                          resetTest();
-                        }
-                      }}
-                      disabled={isTestActive || isTestComplete}
-                      className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
-                        selectedMode === mode
-                          ? 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20'
-                      } ${(isTestActive || isTestComplete) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      {label}
-                    </button>
-                  )) }
-                </div>
-              </div>
-              <div className="flex items-center space-x-1">
-                <span className="text-sm text-gray-600 dark:text-primary-400">🌐</span>
-                <div className="flex space-x-1">
-                  { [
-                    { lang: Language.ENGLISH, label: 'english' },
-                    { lang: Language.FRENCH, label: 'français' }
-                  ].map(({ lang, label }) => (
-                    <button
-                      key={lang}
-                      onClick={() => {
-                        if (!isTestActive && !isTestComplete) {
-                          setSelectedLanguage(lang);
-                          resetTest();
-                        }
-                      }}
-                      disabled={isTestActive || isTestComplete}
-                      className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
-                        selectedLanguage === lang
-                          ? 'text-gray-700 dark:text-primary-200 bg-gray-200 dark:bg-primary-700'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-primary-200 hover:bg-gray-200 dark:hover:bg-primary-700'
-                      } ${(isTestActive || isTestComplete) ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      {label}
-                    </button>
-                  )) }
-                </div>
-              </div>
+          <div className="mb-8 sm:mb-12 flex flex-wrap items-center justify-center gap-3">
+            <div role="group" aria-label="Test length in seconds" className="segmented">
+              {[
+                { mode: TestMode.FIFTEEN_SECONDS, label: '15' },
+                { mode: TestMode.THIRTY_SECONDS, label: '30' },
+                { mode: TestMode.SIXTY_SECONDS, label: '60' },
+                { mode: TestMode.ONE_TWENTY_SECONDS, label: '120' },
+              ].map(({ mode, label }) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={selectedMode === mode}
+                  className="segment"
+                  onClick={() => {
+                    setSelectedMode(mode);
+                    resetTest();
+                  }}
+                >
+                  {label}s
+                </button>
+              ))}
+            </div>
+            <div role="group" aria-label="Language" className="segmented">
+              {[
+                { lang: Language.ENGLISH, label: 'English' },
+                { lang: Language.FRENCH, label: 'Français' },
+              ].map(({ lang, label }) => (
+                <button
+                  key={lang}
+                  type="button"
+                  aria-pressed={selectedLanguage === lang}
+                  className="segment"
+                  onClick={() => {
+                    setSelectedLanguage(lang);
+                    resetTest();
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div role="group" aria-label="Text size" className="segmented">
+              <button
+                type="button"
+                className="segment !px-3"
+                onClick={() => changeFont(-1)}
+                disabled={fontStep <= FONT_STEP_MIN}
+                aria-label="Make text smaller"
+                title="Smaller text"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m6 9 6 6 6-6" />
+                </svg>
+              </button>
+              <span className="select-none px-1 text-sm font-medium text-primary-700 dark:text-primary-300" aria-hidden="true">
+                Aa
+              </span>
+              <button
+                type="button"
+                className="segment !px-3"
+                onClick={() => changeFont(1)}
+                disabled={fontStep >= FONT_STEP_MAX}
+                aria-label="Make text bigger"
+                title="Bigger text"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="m18 15-6-6-6 6" />
+                </svg>
+              </button>
             </div>
           </div>
         )}
@@ -741,36 +789,31 @@ const Home: React.FC = () => {
           {isTestActive && (
             <div className="flex flex-wrap justify-center gap-4 sm:space-x-12 mb-4 sm:mb-8">
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{timeLeft}</div>
-                <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Time</div>
+                <div className="text-3xl font-bold tabular font-mono text-primary-700 dark:text-ember-300">{timeLeft}</div>
+                <div className="text-xs text-primary-600 dark:text-primary-400">Time</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{wpm}</div>
-                <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">WPM</div>
+                <div className="text-3xl font-bold tabular font-mono text-primary-700 dark:text-ember-300">{wpm}</div>
+                <div className="text-xs text-primary-600 dark:text-primary-400">WPM</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d]">{accuracy}%</div>
-                <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Accuracy</div>
+                <div className="text-3xl font-bold tabular font-mono text-primary-700 dark:text-ember-300">{accuracy}%</div>
+                <div className="text-xs text-primary-600 dark:text-primary-400">Accuracy</div>
               </div>
             </div>
           )}
           
           {/* Typing Area */}
           <div 
-            className="relative cursor-text w-full overflow-visible mb-6 sm:mb-8 min-h-[90px] sm:min-h-[120px]"
+            className="card relative cursor-text w-full overflow-hidden mb-6 sm:mb-8 min-h-[200px] sm:min-h-[240px] py-6 sm:py-8 transition-shadow focus-within:border-primary-500 dark:focus-within:border-ember-300/50 focus-within:ring-2 focus-within:ring-primary-500/25 dark:focus-within:ring-ember-300/15"
             onClick={() => {
               if (!isTestComplete && textAreaRef.current) {
                 textAreaRef.current.focus();
               }
             }}
           >
-            <div
-              className={`max-w-full mx-auto h-full flex flex-col justify-center gap-1 px-1 sm:px-4 md:px-8 transition-all duration-300 ${(!isTestActive && !isTestComplete && !isInputFocused) ? 'blur-[1px]' : ''}`}
-              style={{ whiteSpace: 'pre-wrap', fontSize: fontSizeClass.startsWith('text-') ? undefined : fontSizeClass.replace('text-[','').replace(']','') }}
-            >
-              <span className={`font-mono ${fontSizeClass} break-words`}> {/* break-words for mobile overflow */}
-                {getCharacterDisplay()}
-              </span>
+            <div ref={textBoxRef} className="mx-auto flex h-full flex-col justify-center px-4 sm:px-8 font-mono leading-none" style={{ fontSize: `${fontPx}px` }}>
+              {getCharacterDisplay()}
             </div>
             {/* Visible textarea for mobile accessibility */}
             <textarea
@@ -779,6 +822,7 @@ const Home: React.FC = () => {
               onChange={handleInput}
               onFocus={() => setIsInputFocused(true)}
               onBlur={() => setIsInputFocused(false)}
+              aria-label="Typing area. Start typing the text shown to begin the test."
               className="absolute inset-0 w-full h-full opacity-0 resize-none outline-none z-10"
               disabled={isTestComplete}
               placeholder=""
@@ -790,12 +834,10 @@ const Home: React.FC = () => {
             />
             {/* Focus overlay, pointer-events-none so textarea is always focusable */}
             {(!isTestActive && !isTestComplete && !isInputFocused) && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="bg-white/90 dark:bg-primary-800/90 backdrop-blur-sm rounded-lg px-3 sm:px-6 py-3 sm:py-4 shadow-lg border border-gray-200 dark:border-primary-700">
-                  <div className="text-center text-gray-700 dark:text-primary-200">
-                    <p className="text-base sm:text-lg font-medium mb-1">Click in the text area and start typing</p>
-                    <p className="text-xs sm:text-sm opacity-75 mb-2">Selected: {selectedMode} • {selectedLanguage === 'french' ? 'Français' : 'English'}</p>
-                    <p className="text-xs opacity-60">Begin with the first character to start the timer</p>
+              <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none">
+                <div className="rounded-full border border-primary-200 bg-white/90 px-4 py-1.5 dark:border-ember-300/20 dark:bg-primary-950/90">
+                  <div className="text-center text-primary-800 dark:text-ember-200">
+                    <p className="text-sm font-medium">Click here and start typing. The timer starts with your first key.</p>
                   </div>
                 </div>
               </div>
@@ -804,144 +846,82 @@ const Home: React.FC = () => {
 
           {/* Test Complete Screen */}
           {isTestComplete && (
-            <div className="text-center p-8 mb-6">
-              <h2 className="text-2xl font-bold text-primary-600 dark:text-[#ffca8d] mb-6">Test Complete!</h2>
-              
-              {/* Performance Graph */}
-              {wpmHistory.length > 0 && (
-                <div className="mb-8 bg-gray-50 dark:bg-primary-800 rounded-lg p-3 sm:p-6 w-full max-w-full mx-auto px-1 sm:px-4 md:px-8">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Performance Over Time</h3>
-                  <div className="h-56 sm:h-72 md:h-80 w-full min-w-0">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={wpmHistory.map((wpmPoint, index) => {
-                        const errorPoint = errorHistory[index];
-                        return {
-                          ...wpmPoint,
-                          errors: errorPoint && errorPoint.errors > 0 ? wpmPoint.wpm : null
-                        };
-                      })}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-                        <XAxis 
-                          dataKey="time" 
-                          stroke="#6B7280"
-                          tick={{ fontSize: 12 }}
-                          tickFormatter={(value) => `${value}s`}
-                        />
-                        <YAxis 
-                          stroke="#6B7280"
-                          tick={{ fontSize: 12 }}
-                          domain={[0, 'dataMax + 10']}
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#1F2937',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: '#fff'
-                          }}
-                          formatter={(value: any, name?: string | number) => {
-                            if (name === 'wpm') return [`${value} WPM`, 'WPM'];
-                            if (name === 'raw') return [`${value} Raw`, 'Raw WPM'];
-                            if (name === 'accuracy') return [`${value}%`, 'Accuracy'];
-                            if (name === 'errors') {
-                              const dataIndex = wpmHistory.findIndex(h => h.wpm === value);
-                              const actualErrors = dataIndex >= 0 && errorHistory[dataIndex] ? errorHistory[dataIndex].errors : 0;
-                              return [`${actualErrors} Error${actualErrors !== 1 ? 's' : ''}`, 'Errors'];
-                            }
-                            return [value, name];
-                          }}
-                          labelFormatter={(value) => `Time: ${value}s`}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="wpm" 
-                          stroke="#FBBF24" 
-                          strokeWidth={3}
-                          dot={{ fill: '#FBBF24', strokeWidth: 2, r: 4 }}
-                          activeDot={{ r: 6, stroke: '#FBBF24', strokeWidth: 2 }}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="raw" 
-                          stroke="#6B7280" 
-                          strokeWidth={2}
-                          strokeDasharray="5 5"
-                          dot={false}
-                        />
-                        <Line 
-                          type="monotone" 
-                          dataKey="errors" 
-                          stroke="transparent" 
-                          strokeWidth={0}
-                          dot={{ fill: '#EF4444', strokeWidth: 0, r: 4 }}
-                          activeDot={{ r: 6, stroke: '#EF4444', strokeWidth: 2, fill: '#EF4444' }}
-                          connectNulls={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+            <div className="text-center py-4 mb-6">
+              <h2 className="sr-only">Test complete</h2>
+
+              <dl className="mx-auto mb-6 grid w-full grid-cols-3 gap-3 sm:gap-6 text-center">
+                {[
+                  { label: 'Words per minute', value: String(wpm) },
+                  { label: 'Accuracy', value: accuracy + '%' },
+                  { label: 'Correct characters', value: correctChars + '/' + totalChars },
+                ].map((m) => (
+                  <div key={m.label} className="card px-3 py-5 sm:px-6 sm:py-8">
+                    <dt className="text-xs sm:text-sm text-primary-600 dark:text-primary-300">{m.label}</dt>
+                    <dd className="mt-1 font-mono text-xl min-[420px]:text-2xl sm:text-5xl lg:text-6xl break-all font-bold tabular text-primary-950 dark:text-ember-300">{m.value}</dd>
                   </div>
-                  <div className="flex flex-wrap justify-center space-x-6 mt-4 text-sm">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                      <span className="text-gray-600 dark:text-gray-300">Net WPM</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-1 bg-gray-500 rounded-full"></div>
-                      <span className="text-gray-600 dark:text-gray-300">Raw WPM</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                      <span className="text-gray-600 dark:text-gray-300">Errors</span>
-                    </div>
+                ))}
+              </dl>
+
+              {chartData.length > 0 && (
+                <div className="card mx-auto mb-6 w-full p-4 sm:p-8 text-center">
+                  <div className="mb-5 flex flex-col items-center justify-center gap-3">
+                    <h3 className="text-base font-semibold text-primary-950 dark:text-ember-300">Speed over time</h3>
+                    <ul className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs sm:text-sm text-primary-700 dark:text-primary-300" aria-label="Chart key">
+                      <li className="flex items-center gap-2"><span className="h-0.5 w-4 rounded bg-primary-600 dark:bg-ember-300" />Net WPM</li>
+                      <li className="flex items-center gap-2"><span className="w-4 border-t-2 border-dashed border-primary-400" />Raw WPM</li>
+                      <li className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-red-400" />Mistakes</li>
+                    </ul>
+                  </div>
+                  <div className="h-60 sm:h-80 lg:h-96 w-full min-w-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+                        <defs>
+                          <linearGradient id="wpmFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ffca8d" stopOpacity={0.28} />
+                            <stop offset="100%" stopColor="#ffca8d" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid stroke="#8d629b" strokeOpacity={0.2} vertical={false} />
+                        <XAxis dataKey="time" type="number" domain={[0, 'dataMax']} stroke="#a688b3" tick={{ fontSize: 12, fill: '#a688b3' }} tickLine={false} tickFormatter={(v) => v + 's'} minTickGap={28} />
+                        <YAxis stroke="#a688b3" tick={{ fontSize: 12, fill: '#a688b3' }} tickLine={false} axisLine={false} allowDecimals={false} domain={[0, (max: number) => Math.ceil((max + 10) / 10) * 10]} width={44} />
+                        <Tooltip
+                          cursor={{ stroke: '#ffca8d', strokeOpacity: 0.4 }}
+                          contentStyle={{ backgroundColor: '#25101f', border: '1px solid rgba(255,202,141,0.25)', borderRadius: 10, color: '#ffe3c4', fontSize: 13 }}
+                          labelStyle={{ color: '#ffca8d', fontWeight: 600 }}
+                          itemStyle={{ color: '#ffe3c4' }}
+                          labelFormatter={(v) => v + ' seconds'}
+                          formatter={(value, name) => {
+                            if (name === 'wpm') return [value + ' WPM', 'Net'];
+                            if (name === 'raw') return [value + ' WPM', 'Raw'];
+                            return [value, String(name)];
+                          }}
+                        />
+                        <Area type="monotone" dataKey="wpm" stroke="none" fill="url(#wpmFill)" isAnimationActive={false} legendType="none" tooltipType="none" />
+                        <Line type="monotone" dataKey="raw" stroke="#a688b3" strokeWidth={1.5} strokeDasharray="4 4" dot={false} activeDot={false} isAnimationActive={false} />
+                        <Line type="monotone" dataKey="wpm" stroke="#ffca8d" strokeWidth={2.5} dot={false} activeDot={{ r: 5, fill: '#ffca8d', stroke: '#25101f', strokeWidth: 2 }} isAnimationActive={false} />
+                        {chartData.filter((p) => p.errors > 0).map((p) => (
+                          <ReferenceDot key={p.time} x={p.time} y={p.wpm} r={4} fill="#f87171" stroke="#25101f" strokeWidth={1.5} />
+                        ))}
+                      </ComposedChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-8 mb-8">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary-600 dark:text-[#ffca8d]">{wpm}</div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">WPM</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600 dark:text-green-400">{accuracy}%</div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Accuracy</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-primary-600 dark:text-[#ffca8d]">{correctChars}/{totalChars}</div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Correct</div>
-                </div>
-              </div>
-              
-              {/* Additional Stats Row */}
-              <div className="grid grid-cols-4 gap-4 mb-8 text-sm">
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
-                    {wpmHistory.length > 0 ? Math.max(...wpmHistory.map(h => h.raw)) : 0}
+              <dl className="mx-auto mb-8 grid w-full grid-cols-2 sm:grid-cols-4 gap-px overflow-hidden rounded-xl border border-primary-200 bg-primary-200 dark:border-ember-300/10 dark:bg-ember-300/10">
+                {[
+                  { label: 'Raw WPM', value: String(rawOverall), hint: 'Speed with mistakes counted' },
+                  { label: 'Characters typed', value: String(totalChars), hint: '' },
+                  { label: 'Consistency', value: consistency + '%', hint: 'How steady your pace was' },
+                  { label: 'Test length', value: testSeconds + 's', hint: '' },
+                ].map((m) => (
+                  <div key={m.label} className="bg-white px-4 py-5 text-center dark:bg-primary-900" title={m.hint || undefined}>
+                    <dt className="text-xs text-primary-600 dark:text-primary-300">{m.label}</dt>
+                    <dd className="mt-1 font-mono text-xl font-semibold tabular text-primary-950 dark:text-ember-200">{m.value}</dd>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Raw</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
-                    {totalChars}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Characters</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
-                    {wpmHistory.length > 0 ? 
-                      Math.round((wpmHistory.reduce((sum, h) => sum + h.wpm, 0) / wpmHistory.length) * 100) / 100 
-                      : 0}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Consistency</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-semibold text-gray-600 dark:text-gray-400">
-                    {getTestDuration(selectedMode)}s
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-primary-400 uppercase tracking-wide">Time</div>
-                </div>
-              </div>
-              
+                ))}
+              </dl>
+
               {/* Submission Status */}
               {user && (
                 <div className="mb-4">
@@ -956,15 +936,15 @@ const Home: React.FC = () => {
               
               <button 
                 onClick={resetTest}
-                className="bg-primary-600 text-white px-8 py-3 rounded font-medium hover:bg-primary-700 transition-colors"
+                className="btn-primary px-8"
               >
-                Try Again
+                Try again
               </button>
             </div>
           )}
 
           {!isTestActive && !isTestComplete && (
-            <div className="text-center text-gray-500 dark:text-primary-400 mb-4">
+            <div className="text-center text-primary-600 dark:text-primary-400 mb-4">
               <p className="text-sm">Focus on the text area above and start typing to begin the test</p>
             </div>
           )}
@@ -972,8 +952,8 @@ const Home: React.FC = () => {
 
         {/* Instructions - Clean and minimal */}
         {!isTestActive && !isTestComplete && (
-          <div className="max-w-4xl mx-auto mt-20 text-center">
-            <div className="text-sm text-gray-500 dark:text-primary-400 space-y-2">
+          <div className="max-w-4xl mx-auto mt-12 sm:mt-20 text-center">
+            <div className="text-sm text-primary-600 dark:text-primary-400 space-y-2">
               <p>Click on the text area to start • Type the words exactly as shown • Use backspace to correct mistakes</p>
               <p>Your WPM and accuracy will be calculated in real-time</p>
             </div>

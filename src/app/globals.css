@@ -1,172 +1,103 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
 @layer base {
-  html {
-    font-family: 'JetBrains Mono', system-ui, sans-serif;
-    --scrollbar-track: #f8fafc;
-    --scrollbar-thumb: #cbd5e1;
-    --scrollbar-thumb-hover: #94a3b8;
+  :root {
+    --bg: #f6f2f8;
+    --line: rgb(55 25 49 / 0.14);
+    --grid: rgb(55 25 49 / 0.06);
+    --glow: rgb(141 98 155 / 0.22);
+    --scrollbar-track: #ede7f0;
+    --scrollbar-thumb: #a688b3;
   }
-  
   html.dark {
-    --scrollbar-track: #371931;
-    --scrollbar-thumb: #8d629b;
-    --scrollbar-thumb-hover: #a688b3;
+    --bg: #25101f;
+    --line: rgb(255 202 141 / 0.13);
+    --grid: rgb(255 202 141 / 0.045);
+    --glow: rgb(141 98 155 / 0.32);
+    --scrollbar-track: #25101f;
+    --scrollbar-thumb: #5a3e67;
   }
-  
+
+  html {
+    font-family: var(--font-sans), system-ui, sans-serif;
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-white dark:bg-primary-900 text-gray-900 dark:text-[#ffca8d] transition-colors duration-300;
+    @apply text-primary-950 dark:text-ember-300 antialiased;
+    background-color: var(--bg);
+    /* the ledger: a fine grid that fades out toward the bottom, with one soft violet light behind the top of the page */
+    background-image:
+      radial-gradient(900px 420px at 50% -80px, var(--glow), transparent 70%),
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: auto, 44px 44px, 44px 44px;
+    background-repeat: no-repeat, repeat, repeat;
+    background-attachment: scroll, fixed, fixed;
+    -webkit-mask-image: none;
   }
 
-  /* Custom Scrollbar Styling - Using CSS variables for better theme support */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-  }
+  input, textarea { caret-color: #ffca8d; }
+  ::selection { background: #ffca8d; color: #25101f; }
+  :focus-visible { outline: 2px solid #ffca8d; outline-offset: 2px; border-radius: 6px; }
+  html:not(.dark) :focus-visible { outline-color: #704d7f; }
+  .tabular { font-variant-numeric: tabular-nums; }
 
-  /* Webkit browsers (Chrome, Safari, Edge) */
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
+  * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #8d629b; }
 
-  ::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
-    border-radius: 4px;
-  }
+  /* the page already sizes its own screens: 90vh kept the old layouts from touching the footer edge */
+  .h-screen { height: 90vh !important; }
 
-  ::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 4px;
-    border: 1px solid var(--scrollbar-thumb);
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover);
-  }
-
-  /* Custom height for screen to use 90vh instead of 100vh */
-  .h-screen {
-    height: 90vh !important;
-  }
-
-  ::-webkit-scrollbar-corner {
-    background: var(--scrollbar-track);
-  }
-
-  /* Form elements */
-  textarea::-webkit-scrollbar,
-  input::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  textarea::-webkit-scrollbar-track,
-  input::-webkit-scrollbar-track {
-    background: var(--scrollbar-track);
-    border-radius: 3px;
-  }
-
-  textarea::-webkit-scrollbar-thumb,
-  input::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 3px;
-  }
-
-  textarea::-webkit-scrollbar-thumb:hover,
-  input::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover);
-  }
-
-  /* Additional fallback for stubborn browsers */
-  body::-webkit-scrollbar-track {
-    background: var(--scrollbar-track) !important;
-  }
-
-  body::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb) !important;
-  }
-
-  body::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover) !important;
-  }
-
-  /* Force update for all scrollable elements */
-  div::-webkit-scrollbar-track,
-  main::-webkit-scrollbar-track,
-  section::-webkit-scrollbar-track {
-    background: var(--scrollbar-track) !important;
-  }
-
-  div::-webkit-scrollbar-thumb,
-  main::-webkit-scrollbar-thumb,
-  section::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb) !important;
-  }
-
-  div::-webkit-scrollbar-thumb:hover,
-  main::-webkit-scrollbar-thumb:hover,
-  section::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover) !important;
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-primary-900;
+    @apply inline-flex items-center justify-center gap-2 min-h-[44px] rounded-lg px-5 py-2 text-sm font-semibold transition duration-200
+      bg-primary-600 text-white hover:bg-primary-700
+      dark:bg-ember-300 dark:text-primary-950 dark:hover:bg-ember-200
+      active:translate-y-px;
   }
-  
   .btn-secondary {
-    @apply bg-gray-200 hover:bg-gray-300 dark:bg-primary-700 dark:hover:bg-primary-600 text-gray-900 dark:text-primary-100 font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 dark:focus:ring-offset-primary-900;
+    @apply inline-flex items-center justify-center gap-2 min-h-[44px] rounded-lg px-5 py-2 text-sm font-medium transition duration-200
+      border border-primary-600/30 text-primary-800 hover:bg-primary-100
+      dark:border-ember-300/25 dark:text-ember-300 dark:hover:bg-ember-300/10 dark:hover:border-ember-300/50
+      active:translate-y-px;
   }
-  
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 dark:border-primary-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-primary-800 text-gray-900 dark:text-primary-100 transition-colors duration-200;
+    @apply w-full min-h-[44px] rounded-lg px-3.5 py-2 text-sm transition duration-200
+      bg-white border border-primary-200 text-primary-950 placeholder:text-primary-400
+      focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30
+      dark:bg-primary-950/70 dark:border-ember-300/15 dark:text-ember-200 dark:placeholder:text-primary-400
+      dark:focus:border-ember-300/60 dark:focus:ring-ember-300/20;
   }
-  
+  /* a panel on the ledger: hairline edge, lit from above */
   .card {
-    @apply bg-white dark:bg-primary-800 rounded-lg shadow-lg border border-gray-200 dark:border-primary-700 transition-colors duration-300;
+    @apply rounded-xl border bg-white/80 border-primary-200 shadow-lift
+      dark:bg-primary-900/70 dark:border-ember-300/10 dark:shadow-panel;
+    backdrop-filter: blur(6px);
   }
-  
-  .typing-text {
-    @apply font-mono text-xl leading-relaxed select-none;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-    max-width: 100%;
-  }
-  
-  .char-correct {
-    @apply text-gray-900 dark:text-gray-100 bg-transparent;
-  }
-  
-  .char-incorrect {
-    @apply text-red-500 bg-red-100 dark:text-red-400 dark:bg-red-900/30 rounded;
-  }
-  
-  .char-current {
-    @apply bg-primary-600 text-white rounded animate-pulse;
-  }
-  
-  .char-untyped {
-    @apply text-gray-400 dark:text-gray-500;
-  }
-  
-  /* Special orange text for important content in dark mode */
-  .text-content-primary {
-    @apply text-gray-900 dark:text-[#ffca8d];
-  }
-  
-  .text-content-secondary {
-    @apply text-gray-700 dark:text-[#ffca8d];
-  }
-  
-  .text-content-paragraph {
-    @apply text-gray-800 dark:text-[#ffca8d];
-  }
+  /* control strip: one hairline container, segments inside */
+  .segmented { @apply inline-flex items-center gap-1 rounded-lg border p-1 border-primary-200 bg-white/70 dark:border-ember-300/10 dark:bg-primary-950/60; }
+  .segment { @apply min-h-[36px] rounded-md px-3.5 text-sm font-medium tabular-nums transition duration-150 text-primary-700 hover:bg-primary-100 dark:text-primary-300 dark:hover:bg-ember-300/10 dark:hover:text-ember-300 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .segment[aria-pressed='true'] { @apply bg-primary-600 text-white hover:bg-primary-600 dark:bg-ember-300 dark:text-primary-950 dark:hover:bg-ember-300 dark:hover:text-primary-950; }
+
+  .typing-text { @apply font-mono text-xl leading-relaxed select-none; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; max-width: 100%; }
+  .char-correct { @apply text-primary-950 dark:text-ember-200 bg-transparent; }
+  .char-incorrect { @apply text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-500/15 rounded; }
+  .char-current { @apply bg-primary-600 text-white dark:bg-ember-300 dark:text-primary-950 rounded animate-pulse; }
+  .char-untyped { @apply text-primary-400 dark:text-primary-400/70; }
+
+  .text-content-primary { @apply text-primary-950 dark:text-ember-300; }
+  .text-content-secondary { @apply text-primary-800 dark:text-ember-300; }
+  .text-content-paragraph { @apply text-primary-900 dark:text-ember-300; }
 }
