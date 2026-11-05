@@ -5,8 +5,14 @@ import { getSession, serverError, unauthorized } from "@/lib/api/session";
 export async function GET() {
   const { supabase, user } = await getSession();
   if (!user) return unauthorized();
-  const { data, error } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", user.id).maybeSingle();
+  let { data, error } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", user.id).maybeSingle();
   if (error) return serverError("read current user", error);
+  if (!data) {
+    // an account from before the profile trigger existed: create its profile, then read it again
+    await supabase.rpc("ensure_my_profile");
+    ({ data, error } = await supabase.from("profiles").select(PROFILE_COLUMNS).eq("id", user.id).maybeSingle());
+    if (error) return serverError("read current user", error);
+  }
   return Response.json(toUser(user, data as ProfileRow | null));
 }
 

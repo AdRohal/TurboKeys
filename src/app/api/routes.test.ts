@@ -206,16 +206,18 @@ describe("POST /api/auth/complete-profile", () => {
   const profile = { id: "u1", username: "grace_h", first_name: "Grace", last_name: "Brewster Hopper", avatar_url: null, profile_completed: true, theme: "dark", language: "english", total_tests: 0, best_wpm: 0, average_wpm: 0, best_accuracy: 0, average_accuracy: 0, created_at: "x", updated_at: "y" };
 
   it("splits the full name, checks the username is free, and saves", async () => {
-    const f = fakeSupabase([{ data: true }, { data: profile }]);
+    // first answer is for ensure_my_profile (creates a missing profile), then username_available, then the update
+    const f = fakeSupabase([{ data: null }, { data: true }, { data: profile }]);
     signedIn(f);
     const res = await post({ fullName: "Grace Brewster Hopper", username: "grace_h" });
     expect(res.status).toBe(200);
+    expect(f.called("rpc")[0][1][0]).toBe("ensure_my_profile");
     expect(f.called("update")[0][1][0]).toEqual({ username: "grace_h", first_name: "Grace", last_name: "Brewster Hopper" });
     expect((await res.json()).user).toMatchObject({ username: "grace_h", profileCompleted: true });
   });
 
   it("400 when the username is taken, short, or a field is missing; nothing is saved", async () => {
-    const f = fakeSupabase([{ data: false }]);
+    const f = fakeSupabase([{ data: null }, { data: false }]);
     signedIn(f);
     expect((await post({ fullName: "A B", username: "taken" })).status).toBe(400);
     expect(f.called("update")).toHaveLength(0);

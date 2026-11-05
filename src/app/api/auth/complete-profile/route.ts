@@ -24,6 +24,9 @@ export async function POST(request: Request) {
   const problem = validateUsername(username) ?? validateName(firstName) ?? validateName(lastName);
   if (problem) return badRequest(problem);
 
+  // accounts older than the profile trigger have no profile row yet: create it (a no-op for everyone else)
+  await supabase.rpc("ensure_my_profile");
+
   const { data: free, error: freeError } = await supabase.rpc("username_available", { p_username: username });
   if (freeError) return serverError("check username", freeError);
   if (free !== true) return badRequest("Username is already taken");
