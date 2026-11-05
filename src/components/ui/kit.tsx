@@ -2,26 +2,26 @@ import React from 'react';
 
 /** Shared building blocks for the signed-in screens. */
 
-export const PageShell: React.FC<{ children: React.ReactNode; width?: string }> = ({ children, width = 'max-w-6xl' }) => (
-  <div className="min-h-[calc(100vh-4rem)] py-10 sm:py-14">
-    <div className={`mx-auto ${width} px-4 sm:px-8`}>{children}</div>
+export const PageShell: React.FC<{ children: React.ReactNode; width?: string }> = ({ children, width = 'max-w-7xl' }) => (
+  <div className="min-h-[calc(100vh-3rem)] py-6 sm:py-8">
+    <div className={`mx-auto ${width} px-4 sm:px-6`}>{children}</div>
   </div>
 );
 
 export const PageHeader: React.FC<{ title: string; subtitle?: string; children?: React.ReactNode }> = ({ title, subtitle, children }) => (
-  <header className="mb-8 text-center">
-    <h1 className="text-balance text-4xl font-bold tracking-tight text-primary-950 dark:text-ember-300 sm:text-5xl">{title}</h1>
-    {subtitle && <p className="mx-auto mt-3 max-w-prose text-primary-700 dark:text-primary-300">{subtitle}</p>}
+  <header className="mb-5 text-center">
+    <h1 className="text-balance text-2xl font-bold tracking-tight text-primary-950 dark:text-ember-300 sm:text-3xl">{title}</h1>
+    {subtitle && <p className="mx-auto mt-1.5 max-w-prose text-sm text-primary-700 dark:text-primary-300">{subtitle}</p>}
     {children && <div className="mt-5 flex justify-center">{children}</div>}
   </header>
 );
 
 /** A strip of figures divided by hairlines, like one row of a ledger. */
 export const StatStrip: React.FC<{ items: { label: string; value: React.ReactNode }[] }> = ({ items }) => (
-  <dl className={`grid gap-px overflow-hidden rounded-xl border border-primary-200 bg-primary-200 dark:border-ember-300/10 dark:bg-ember-300/10 ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+  <dl className={`grid gap-px overflow-hidden rounded-lg border border-primary-200 bg-primary-200 dark:border-ember-300/10 dark:bg-ember-300/10 ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
     {items.map((s) => (
-      <div key={s.label} className="bg-white/90 px-2 py-4 text-center dark:bg-primary-900 sm:px-4 sm:py-5">
-        <dd className="font-mono text-2xl font-semibold tabular text-primary-950 dark:text-ember-300 sm:text-4xl">{s.value}</dd>
+      <div key={s.label} className="bg-white/90 px-2 py-3 text-center dark:bg-primary-900 sm:px-4 sm:py-3">
+        <dd className="font-mono text-xl font-semibold tabular text-primary-950 dark:text-ember-300 sm:text-2xl">{s.value}</dd>
         <dt className="mt-1 text-xs text-primary-600 dark:text-primary-400 sm:text-sm">{s.label}</dt>
       </div>
     ))}
@@ -31,7 +31,7 @@ export const StatStrip: React.FC<{ items: { label: string; value: React.ReactNod
 export const Avatar: React.FC<{ name?: string; size?: 'md' | 'lg' }> = ({ name = '?', size = 'lg' }) => (
   <span
     aria-hidden="true"
-    className={`grid shrink-0 place-items-center rounded-full border font-semibold border-primary-300 bg-primary-50 text-primary-700 dark:border-ember-300/30 dark:bg-ember-300/10 dark:text-ember-300 ${size === 'lg' ? 'h-20 w-20 text-3xl' : 'h-10 w-10 text-base'}`}
+    className={`grid shrink-0 place-items-center rounded-full border font-semibold border-primary-300 bg-primary-50 text-primary-700 dark:border-ember-300/30 dark:bg-ember-300/10 dark:text-ember-300 ${size === 'lg' ? 'h-14 w-14 text-2xl' : 'h-8 w-8 text-sm'}`}
   >
     {name.charAt(0).toUpperCase()}
   </span>
@@ -41,7 +41,7 @@ export const Avatar: React.FC<{ name?: string; size?: 'md' | 'lg' }> = ({ name =
 export const shortId = (id?: string) => (id && id.length > 12 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id || '');
 
 export const Spinner: React.FC<{ label?: string }> = ({ label = 'Loading' }) => (
-  <div className="grid place-items-center py-16" role="status">
+  <div className="grid place-items-center py-10" role="status">
     <span className="h-8 w-8 animate-spin rounded-full border-2 border-primary-300 border-t-primary-700 dark:border-ember-300/20 dark:border-t-ember-300" />
     <span className="sr-only">{label}</span>
   </div>

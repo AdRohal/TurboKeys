@@ -52,7 +52,7 @@ const Loading = () => (
 );
 
 const Empty: React.FC<{ title: string; body: string; to: string; cta: string }> = ({ title, body, to, cta }) => (
-  <div className="px-6 py-16 text-center">
+  <div className="px-6 py-10 text-center">
     <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">{title}</h2>
     <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">{body}</p>
     <Link to={to} className="btn-primary mt-6">
@@ -133,9 +133,9 @@ const Leaderboard: React.FC = () => {
   const isMath = board === 'math';
 
   return (
-    <div className="min-h-screen py-10 sm:py-14">
+    <div className="min-h-screen py-6 sm:py-8">
       <div className="mx-auto max-w-6xl px-4 sm:px-8 text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">Leaderboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">Leaderboard</h1>
         <p className="mx-auto mt-3 max-w-prose text-primary-700 dark:text-primary-300">
           {isMath
             ? 'The sharpest minds on TurboKeys, ranked by their best 60 second Fast thinking round.'
@@ -165,7 +165,7 @@ const Leaderboard: React.FC = () => {
           {loading ? (
             <Loading />
           ) : failed ? (
-            <div className="px-6 py-16 text-center" role="alert">
+            <div className="px-6 py-10 text-center" role="alert">
               <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">The leaderboard did not load</h2>
               <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">{failMessage || 'Check your connection and reload the page to try again.'}</p>
             </div>

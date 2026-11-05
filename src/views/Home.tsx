@@ -699,9 +699,9 @@ const Home: React.FC = () => {
 
   return (
     <div className="min-h-screen text-primary-950 dark:text-primary-100">
-      <div className="w-full max-w-7xl px-4 sm:px-8 py-8 sm:py-14 mx-auto">
+      <div className="w-full max-w-7xl px-4 sm:px-6 py-5 sm:py-8 mx-auto">
         <div className="mx-auto max-w-3xl text-center mb-8 sm:mb-12">
-          <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">
             How fast can you type?
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-base sm:text-lg text-primary-700 dark:text-primary-300">
@@ -857,7 +857,7 @@ const Home: React.FC = () => {
                 ].map((m) => (
                   <div key={m.label} className="card px-3 py-5 sm:px-6 sm:py-8">
                     <dt className="text-xs sm:text-sm text-primary-600 dark:text-primary-300">{m.label}</dt>
-                    <dd className="mt-1 font-mono text-xl min-[420px]:text-2xl sm:text-5xl lg:text-6xl break-all font-bold tabular text-primary-950 dark:text-ember-300">{m.value}</dd>
+                    <dd className="mt-1 font-mono text-xl min-[420px]:text-2xl sm:text-3xl lg:text-4xl break-all font-bold tabular text-primary-950 dark:text-ember-300">{m.value}</dd>
                   </div>
                 ))}
               </dl>

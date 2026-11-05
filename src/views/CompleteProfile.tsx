@@ -127,7 +127,7 @@ const CompleteProfile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] grid place-items-center">
+      <div className="min-h-[calc(100vh-3rem)] grid place-items-center">
         <Spinner label="Loading your profile" />
       </div>
     );
@@ -137,7 +137,7 @@ const CompleteProfile: React.FC = () => {
   const canSubmit = !submitting && !!formData.fullName.trim() && !!formData.username && !usernameProblem && usernameAvailable !== false && !checkingUsername;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-3rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="card w-full max-w-lg p-6 sm:p-10">
         <div className="flex flex-col items-center text-center">
           <Avatar name={formData.fullName || user?.email} />

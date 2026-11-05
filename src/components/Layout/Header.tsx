@@ -79,7 +79,7 @@ const Header: React.FC = () => {
   const navClass = (to: string) =>
     `relative px-3 py-2 text-sm font-medium rounded-md transition-colors ${
       active(to)
-        ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[13px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
+        ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[9px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
         : 'text-primary-700 hover:text-primary-950 dark:text-primary-300 dark:hover:text-ember-200'
     }`;
   const menuItem =
@@ -87,7 +87,7 @@ const Header: React.FC = () => {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-primary-200 bg-white/80 dark:border-ember-300/10 dark:bg-primary-950/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight text-primary-950 dark:text-ember-300" aria-label="TurboKeys home">
             <img src="/Logo/icon.png" alt="" width={30} height={30} className="h-[30px] w-[30px] rounded-md object-contain" />
@@ -102,7 +102,7 @@ const Header: React.FC = () => {
                 aria-expanded={challengesOpen}
                 className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   inChallenges
-                    ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[13px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
+                    ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[9px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
                     : 'text-primary-700 hover:text-primary-950 dark:text-primary-300 dark:hover:text-ember-200'
                 }`}
               >
@@ -140,7 +140,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={toggleTheme}
-            className="grid h-10 w-10 place-items-center rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-100 dark:border-ember-300/10 dark:text-primary-300 dark:hover:bg-ember-300/10 dark:hover:text-ember-300 transition-colors"
+            className="grid h-8 w-8 place-items-center rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-100 dark:border-ember-300/10 dark:text-primary-300 dark:hover:bg-ember-300/10 dark:hover:text-ember-300 transition-colors"
             aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
           >
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
@@ -193,7 +193,7 @@ const Header: React.FC = () => {
           <button
             ref={burgerRef}
             onClick={() => setMobileOpen((o) => !o)}
-            className="md:hidden grid h-10 w-10 place-items-center rounded-lg border border-primary-200 text-primary-700 dark:border-ember-300/10 dark:text-primary-300"
+            className="md:hidden grid h-8 w-8 place-items-center rounded-lg border border-primary-200 text-primary-700 dark:border-ember-300/10 dark:text-primary-300"
             aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={mobileOpen}
             aria-controls="mobile-menu"

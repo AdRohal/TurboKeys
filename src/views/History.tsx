@@ -125,12 +125,12 @@ const History: React.FC = () => {
         {loading ? (
           <Spinner label="Loading history" />
         ) : failed ? (
-          <div className="px-6 py-16 text-center" role="alert">
+          <div className="px-6 py-10 text-center" role="alert">
             <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">Your history did not load</h2>
             <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">Check your connection and reload the page.</p>
           </div>
         ) : history.length === 0 ? (
-          <div className="px-6 py-16 text-center">
+          <div className="px-6 py-10 text-center">
             <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">{selectedDuration || selectedMode ? 'No tests match these filters' : 'No tests yet'}</h2>
             <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">
               {selectedDuration || selectedMode ? 'Try All to see every test.' : 'Finish a test while signed in and it appears here.'}

@@ -187,9 +187,9 @@ const FastThinking: React.FC = () => {
   const low = secondsLeft <= 10;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-8 sm:py-14">
+    <div className="min-h-[calc(100vh-3rem)] py-5 sm:py-8">
       <div className="mx-auto w-full max-w-4xl px-4 sm:px-8 text-center">
-        <h1 className="text-4xl sm:text-6xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">Think fast</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">Think fast</h1>
         <p className="mx-auto mt-4 max-w-xl text-base sm:text-lg text-primary-700 dark:text-primary-300">
           {ROUND_SECONDS} seconds of mental math. Read the question, pick the right answer out of three, and keep your streak alive.
         </p>
@@ -245,7 +245,7 @@ const FastThinking: React.FC = () => {
 
             <div className="card px-4 py-8 sm:py-12" aria-live="polite">
               <p className="text-sm text-primary-600 dark:text-primary-400">Level {question.level}{question.level === MAX_LEVEL ? ' (max)' : ''}</p>
-              <p className="mt-3 font-mono text-5xl sm:text-7xl font-bold tabular text-primary-950 dark:text-ember-200">
+              <p className="mt-3 font-mono text-4xl sm:text-5xl font-bold tabular text-primary-950 dark:text-ember-200">
                 {question.prompt} <span className="text-primary-500 dark:text-primary-400">=</span> ?
               </p>
             </div>
@@ -285,7 +285,7 @@ const FastThinking: React.FC = () => {
           <div className="mx-auto mt-10 max-w-3xl">
             <div className="card px-6 py-8 sm:py-10">
               <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-300">Round over</h2>
-              <p className="mt-2 font-mono text-6xl sm:text-8xl font-bold tabular text-primary-950 dark:text-ember-300">{stats.points}</p>
+              <p className="mt-2 font-mono text-5xl sm:text-6xl font-bold tabular text-primary-950 dark:text-ember-300">{stats.points}</p>
               <p className="mt-1 text-primary-700 dark:text-primary-300">points</p>
               {isNewBest && <p className="mt-3 font-medium text-emerald-700 dark:text-emerald-300">New personal best</p>}
               {!isNewBest && best !== null && <p className="mt-3 text-sm text-primary-600 dark:text-primary-400">Your best: <span className="font-mono tabular">{best}</span> points</p>}

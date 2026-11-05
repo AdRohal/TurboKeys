@@ -97,7 +97,7 @@ const Profile: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="px-6 py-14 text-center">
+          <div className="px-6 py-10 text-center">
             <p className="mx-auto max-w-sm text-primary-700 dark:text-primary-300">No tests yet. Finish one and it shows up here.</p>
             <Link to="/" className="btn-primary mt-6">Start a test</Link>
           </div>

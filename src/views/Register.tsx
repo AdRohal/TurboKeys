@@ -63,7 +63,7 @@ const Register: React.FC = () => {
 
   if (checkEmail) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="min-h-[calc(100vh-3rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-4 text-center" role="status">
           <h2 className="text-3xl font-bold tracking-tight text-primary-950 dark:text-ember-300 text-balance">Check your email</h2>
           <p className="text-primary-700 dark:text-primary-300">
@@ -78,7 +78,7 @@ const Register: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-3rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 card p-6 sm:p-10">
         <div>
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-xl border border-primary-200 bg-primary-50 dark:border-ember-300/20 dark:bg-ember-300/10">
