@@ -18,11 +18,11 @@ export const PageHeader: React.FC<{ title: string; subtitle?: string; children?:
 
 /** A strip of figures divided by hairlines, like one row of a ledger. */
 export const StatStrip: React.FC<{ items: { label: string; value: React.ReactNode }[] }> = ({ items }) => (
-  <dl className={`grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-primary-200 bg-primary-200 dark:border-ember-300/10 dark:bg-ember-300/10 ${items.length > 3 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+  <dl className={`grid gap-px overflow-hidden rounded-xl border border-primary-200 bg-primary-200 dark:border-ember-300/10 dark:bg-ember-300/10 ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
     {items.map((s) => (
-      <div key={s.label} className="bg-white/90 px-4 py-5 text-center dark:bg-primary-900">
-        <dd className="font-mono text-3xl font-semibold tabular text-primary-950 dark:text-ember-300 sm:text-4xl">{s.value}</dd>
-        <dt className="mt-1 text-sm text-primary-600 dark:text-primary-400">{s.label}</dt>
+      <div key={s.label} className="bg-white/90 px-2 py-4 text-center dark:bg-primary-900 sm:px-4 sm:py-5">
+        <dd className="font-mono text-2xl font-semibold tabular text-primary-950 dark:text-ember-300 sm:text-4xl">{s.value}</dd>
+        <dt className="mt-1 text-xs text-primary-600 dark:text-primary-400 sm:text-sm">{s.label}</dt>
       </div>
     ))}
   </dl>
@@ -66,3 +66,14 @@ export const Field: React.FC<{ label: string; value: React.ReactNode; mono?: boo
     <div className={`mt-1 min-h-[44px] rounded-lg border px-3.5 py-2.5 text-sm border-primary-200 bg-primary-50/60 text-primary-950 dark:border-ember-300/10 dark:bg-primary-950/50 dark:text-ember-200 ${mono ? 'font-mono' : ''}`}>{value}</div>
   </div>
 );
+
+/** Oct 30 on a phone, Oct 30, 2026 from the small breakpoint up. */
+export const ShortDate: React.FC<{ value: string | Date }> = ({ value }) => {
+  const d = new Date(value);
+  return (
+    <>
+      {d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+      <span className="hidden sm:inline">, {d.getFullYear()}</span>
+    </>
+  );
+};

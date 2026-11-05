@@ -47,7 +47,8 @@ const Register: React.FC = () => {
       if (result.needsEmailConfirmation) {
         setCheckEmail(true);
       } else {
-        navigate('/');
+        // a new account lands on the welcome step, where the username can be confirmed or changed
+        navigate('/complete-profile?welcome=1');
       }
     } catch (error) {
       // Error is handled by AuthContext

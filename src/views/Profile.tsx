@@ -5,7 +5,7 @@ import { Link } from '@/lib/router';
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI, typingAPI } from '../services/api';
 import { TypingTestResult } from '../types';
-import { Avatar, PageShell, Spinner, StatStrip, shortId } from '../components/ui/kit';
+import { Avatar, PageShell, ShortDate, Spinner, StatStrip, shortId } from '../components/ui/kit';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -79,18 +79,18 @@ const Profile: React.FC = () => {
               <thead>
                 <tr className="border-y border-primary-200 text-xs text-primary-600 dark:border-ember-300/10 dark:text-primary-400">
                   {['Date', 'Mode', 'WPM', 'Accuracy', 'Errors'].map((h) => (
-                    <th key={h} scope="col" className="px-3 py-3 font-medium">{h}</th>
+                    <th key={h} scope="col" className={`px-2 py-3 font-medium sm:px-3 ${h === 'Mode' ? 'hidden sm:table-cell' : ''}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {userTests.map((test) => (
                   <tr key={test.id} className="border-b border-primary-100 transition-colors last:border-0 hover:bg-primary-50 dark:border-ember-300/5 dark:hover:bg-ember-300/5">
-                    <td className="px-3 py-3 text-sm text-primary-800 dark:text-primary-200">{new Date(test.completedAt).toLocaleDateString()}</td>
-                    <td className="px-3 py-3 text-sm capitalize text-primary-800 dark:text-primary-200">{test.mode}</td>
-                    <td className="px-3 py-3 font-mono font-semibold tabular text-primary-950 dark:text-ember-300">{test.wpm}</td>
-                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{test.accuracy}%</td>
-                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{test.errorsCount}</td>
+                    <td className="whitespace-nowrap px-2 py-3 text-sm text-primary-800 dark:text-primary-200 sm:px-3"><ShortDate value={test.completedAt} /></td>
+                    <td className="hidden px-3 py-3 text-sm capitalize text-primary-800 dark:text-primary-200 sm:table-cell">{test.mode}</td>
+                    <td className="px-2 py-3 font-mono font-semibold tabular sm:px-3 text-primary-950 dark:text-ember-300">{test.wpm}</td>
+                    <td className="px-2 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:px-3">{test.accuracy}%</td>
+                    <td className="px-2 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:px-3">{test.errorsCount}</td>
                   </tr>
                 ))}
               </tbody>

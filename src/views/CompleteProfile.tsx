@@ -18,6 +18,8 @@ const CompleteProfile: React.FC = () => {
   
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // /complete-profile?welcome=1 is the first step after sign-up: it shows even when a username was already chosen
+  const [welcome, setWelcome] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
@@ -26,12 +28,19 @@ const CompleteProfile: React.FC = () => {
   const fetchUserInfo = useCallback(async () => {
     try {
       const current = await authAPI.getCurrentUser();
+      const isWelcome = new URLSearchParams(window.location.search).get('welcome') === '1';
+      setWelcome(isWelcome);
       setUser(current);
+      if (current.username) {
+        // already chosen at sign-up: prefill it and treat it as available (it is theirs)
+        setFormData((prev) => (prev.username ? prev : { ...prev, username: current.username }));
+        setUsernameAvailable(true);
+      }
       // the name from Google or GitHub is a good starting point
       setFormData((prev) => (prev.fullName ? prev : { ...prev, fullName: [current.firstName, current.lastName].filter(Boolean).join(' ') }));
 
       // If profile is already completed, redirect to home
-      if (current.profileCompleted) {
+      if (current.profileCompleted && !isWelcome) {
         await login(current);
         navigate('/');
       }
@@ -132,9 +141,9 @@ const CompleteProfile: React.FC = () => {
       <div className="card w-full max-w-lg p-6 sm:p-10">
         <div className="flex flex-col items-center text-center">
           <Avatar name={formData.fullName || user?.email} />
-          <h1 className="mt-6 text-balance text-3xl font-bold tracking-tight text-primary-950 dark:text-ember-300 sm:text-4xl">Finish setting up</h1>
+          <h1 className="mt-6 text-balance text-3xl font-bold tracking-tight text-primary-950 dark:text-ember-300 sm:text-4xl">{welcome ? 'Welcome to TurboKeys' : 'Finish setting up'}</h1>
           <p className="mt-2 max-w-sm text-sm text-primary-700 dark:text-primary-300">
-            Pick the name that appears on the leaderboard. You can change your full name later; your username stays.
+            {welcome ? 'Your account is ready. Keep this username or pick another, then start typing. It is the name shown on the leaderboard.' : 'Pick the name that appears on the leaderboard. You can change your full name later; your username stays.'}
           </p>
         </div>
 
@@ -203,6 +212,11 @@ const CompleteProfile: React.FC = () => {
           <button type="submit" disabled={!canSubmit} className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50">
             {submitting ? 'Saving…' : 'Save and start typing'}
           </button>
+          {welcome && (
+            <button type="button" onClick={() => navigate('/')} className="btn-secondary w-full">
+              Skip for now
+            </button>
+          )}
         </form>
       </div>
     </div>

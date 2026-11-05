@@ -19,6 +19,9 @@ export async function GET(request: Request) {
 
   const { data: auth } = await supabase.auth.getUser();
   const { data: profile } = auth.user ? await supabase.from("profiles").select("profile_completed").eq("id", auth.user.id).maybeSingle() : { data: null };
-  const destination = profile && profile.profile_completed === false ? "/complete-profile" : next;
+  // someone who has only just confirmed their email is new here: show them the welcome step before the home page
+  const confirmedAt = auth.user?.email_confirmed_at ? Date.parse(auth.user.email_confirmed_at) : 0;
+  const justConfirmed = confirmedAt > 0 && Date.now() - confirmedAt < 2 * 60 * 1000;
+  const destination = profile && profile.profile_completed === false ? "/complete-profile" : justConfirmed ? "/complete-profile?welcome=1" : next;
   return NextResponse.redirect(new URL(destination, url.origin));
 }

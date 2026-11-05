@@ -5,7 +5,7 @@ import { Link } from '@/lib/router';
 import { useAuth } from '../contexts/AuthContext';
 import { typingAPI } from '../services/api';
 import { TypingTestResult } from '../types';
-import { PageHeader, PageShell, Spinner, StatStrip } from '../components/ui/kit';
+import { PageHeader, PageShell, ShortDate, Spinner, StatStrip } from '../components/ui/kit';
 
 type SortKey = 'date' | 'wpm' | 'accuracy';
 
@@ -69,7 +69,7 @@ const History: React.FC = () => {
   const avg = (k: 'wpm' | 'accuracy') => Math.round(history.reduce((s, t) => s + t[k], 0) / history.length);
 
   const SortHead: React.FC<{ k: SortKey; children: React.ReactNode }> = ({ k, children }) => (
-    <th scope="col" aria-sort={sortBy === k ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'} className="px-3 py-3 font-medium">
+    <th scope="col" aria-sort={sortBy === k ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'} className="px-2 py-3 font-medium sm:px-3">
       <button type="button" onClick={() => sortOn(k)} className="inline-flex items-center gap-1 rounded px-1 transition-colors hover:text-primary-950 dark:hover:text-ember-300">
         {children}
         <span aria-hidden="true" className={sortBy === k ? 'text-primary-950 dark:text-ember-300' : 'opacity-30'}>{sortBy === k && sortOrder === 'asc' ? '↑' : '↓'}</span>
@@ -78,7 +78,7 @@ const History: React.FC = () => {
   );
 
   const plain = (h: string) => (
-    <th key={h} scope="col" className="px-3 py-3 font-medium">{h}</th>
+    <th key={h} scope="col" className="px-2 py-3 font-medium sm:px-3">{h}</th>
   );
 
   return (
@@ -155,17 +155,17 @@ const History: React.FC = () => {
               <tbody>
                 {sorted.map((t) => (
                   <tr key={t.id} className="border-b border-primary-100 transition-colors last:border-0 hover:bg-primary-50 dark:border-ember-300/5 dark:hover:bg-ember-300/5">
-                    <td className="px-3 py-3 text-sm text-primary-800 dark:text-primary-200">
-                      {new Date(t.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <td className="whitespace-nowrap px-2 py-3 text-sm text-primary-800 dark:text-primary-200 sm:px-3">
+                      <ShortDate value={t.completedAt} />
                     </td>
-                    <td className="px-3 py-3 font-mono font-semibold tabular text-primary-950 dark:text-ember-300">{t.wpm}</td>
-                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{t.accuracy}%</td>
+                    <td className="px-2 py-3 font-mono font-semibold tabular sm:px-3 text-primary-950 dark:text-ember-300">{t.wpm}</td>
+                    <td className="px-2 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:px-3">{t.accuracy}%</td>
                     <td className="hidden px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:table-cell">{t.charactersTyped}</td>
-                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{t.errorsCount}</td>
+                    <td className="px-2 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:px-3">{t.errorsCount}</td>
                     <td className="hidden px-3 py-3 sm:table-cell">
                       <span className="rounded-md border border-primary-200 px-2 py-0.5 text-xs capitalize text-primary-700 dark:border-ember-300/15 dark:text-primary-300">{t.mode}</span>
                     </td>
-                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{t.duration}s</td>
+                    <td className="px-2 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:px-3">{t.duration}s</td>
                   </tr>
                 ))}
               </tbody>
