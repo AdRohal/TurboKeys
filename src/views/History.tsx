@@ -1,316 +1,179 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Link } from '@/lib/router';
 import { useAuth } from '../contexts/AuthContext';
 import { typingAPI } from '../services/api';
 import { TypingTestResult } from '../types';
+import { PageHeader, PageShell, Spinner, StatStrip } from '../components/ui/kit';
+
+type SortKey = 'date' | 'wpm' | 'accuracy';
+
+const DURATIONS: (number | null)[] = [null, 15, 30, 60, 120];
+const MODES = ['', 'time', 'words'];
 
 const History: React.FC = () => {
   const { user } = useAuth();
   const [history, setHistory] = useState<TypingTestResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'date' | 'wpm' | 'accuracy'>('date');
+  const [failed, setFailed] = useState(false);
+  const [sortBy, setSortBy] = useState<SortKey>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [selectedDuration, setSelectedDuration] = useState<number | null>(null);
-  const [selectedMode, setSelectedMode] = useState<string>('');
+  const [selectedMode, setSelectedMode] = useState('');
   const [totalTests, setTotalTests] = useState(0);
 
   useEffect(() => {
     const loadHistory = async () => {
       if (!user) return;
-      
       try {
         setLoading(true);
-        const response = await typingAPI.getHistory(
-          1, 
-          100, // Get more records since we'll scroll through them 
-          selectedDuration || undefined, 
-          selectedMode || undefined, 
-          'english'
-        );
+        setFailed(false);
+        const response = await typingAPI.getHistory(1, 100, selectedDuration || undefined, selectedMode || undefined, 'english');
         setHistory(response.tests);
         setTotalTests(response.total);
       } catch (error) {
         console.error('Failed to load typing history:', error);
-        // Fallback to empty array if API fails
         setHistory([]);
+        setFailed(true);
       } finally {
         setLoading(false);
       }
     };
-
     loadHistory();
   }, [user, selectedDuration, selectedMode]);
 
-  const sortedHistory = [...history].sort((a, b) => {
-    let aValue, bValue;
-    
-    switch (sortBy) {
-      case 'date':
-        aValue = new Date(a.completedAt).getTime();
-        bValue = new Date(b.completedAt).getTime();
-        break;
-      case 'wpm':
-        aValue = a.wpm;
-        bValue = b.wpm;
-        break;
-      case 'accuracy':
-        aValue = a.accuracy;
-        bValue = b.accuracy;
-        break;
-      default:
-        aValue = new Date(a.completedAt).getTime();
-        bValue = new Date(b.completedAt).getTime();
-    }
-    
-    return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
-  });
+  const value = (t: TypingTestResult, k: SortKey) => (k === 'date' ? new Date(t.completedAt).getTime() : t[k]);
+  const sorted = [...history].sort((a, b) => (sortOrder === 'asc' ? value(a, sortBy) - value(b, sortBy) : value(b, sortBy) - value(a, sortBy)));
 
-  const handleSort = (field: 'date' | 'wpm' | 'accuracy') => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
+  const sortOn = (k: SortKey) => {
+    if (sortBy === k) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    else {
+      setSortBy(k);
       setSortOrder('desc');
     }
   };
 
-  const durationOptions = [15, 30, 60, 120];
-  const modeOptions = ['time', 'words'];
-
-  const handleDurationFilter = (duration: number | null) => {
-    setSelectedDuration(duration);
-  };
-
-  const handleModeFilter = (mode: string) => {
-    setSelectedMode(mode);
-  };
-
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Please log in to view your typing history
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300">
-            You need to be logged in to access your typing test history.
-          </p>
+      <PageShell width="max-w-xl">
+        <div className="card p-10 text-center">
+          <h1 className="text-2xl font-bold text-primary-950 dark:text-ember-300">Sign in to see your history</h1>
+          <p className="mt-2 text-primary-700 dark:text-primary-300">Every test you finish while signed in is saved here.</p>
+          <Link to="/login" className="btn-primary mt-6">Sign in</Link>
         </div>
-      </div>
+      </PageShell>
     );
   }
 
+  const avg = (k: 'wpm' | 'accuracy') => Math.round(history.reduce((s, t) => s + t[k], 0) / history.length);
+
+  const SortHead: React.FC<{ k: SortKey; children: React.ReactNode }> = ({ k, children }) => (
+    <th scope="col" aria-sort={sortBy === k ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'} className="px-3 py-3 font-medium">
+      <button type="button" onClick={() => sortOn(k)} className="inline-flex items-center gap-1 rounded px-1 transition-colors hover:text-primary-950 dark:hover:text-ember-300">
+        {children}
+        <span aria-hidden="true" className={sortBy === k ? 'text-primary-950 dark:text-ember-300' : 'opacity-30'}>{sortBy === k && sortOrder === 'asc' ? '↑' : '↓'}</span>
+      </button>
+    </th>
+  );
+
+  const plain = (h: string) => (
+    <th key={h} scope="col" className="px-3 py-3 font-medium">{h}</th>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-primary-900 py-8 overflow-y-auto">
-      <div className="max-w-6xl mx-auto px-4 h-full flex flex-col">          <div className="bg-white dark:bg-primary-800 rounded-lg shadow-lg p-6 flex-1 flex flex-col overflow-hidden">
-            <div className="flex justify-between items-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Typing History
-              </h1>
-              
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                Total Tests: {totalTests}
-              </div>
-            </div>
+    <PageShell>
+      <PageHeader title="Typing history" subtitle={`${totalTests} ${totalTests === 1 ? 'test' : 'tests'} on record. Filter by length or mode, and sort any column.`} />
 
-            {/* Filter Controls */}
-            <div className="mb-6 space-y-4">
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Duration Filter */}
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Duration:
-                  </label>
-                  <select
-                    value={selectedDuration || ''}
-                    onChange={(e) => handleDurationFilter(e.target.value ? parseInt(e.target.value) : null)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Durations</option>
-                    {durationOptions.map(duration => (
-                      <option key={duration} value={duration}>{duration}s</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Mode Filter */}
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Mode:
-                  </label>
-                  <select
-                    value={selectedMode}
-                    onChange={(e) => handleModeFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">All Modes</option>
-                    {modeOptions.map(mode => (
-                      <option key={mode} value={mode}>{mode}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sort Controls */}
-                <div className="flex items-center space-x-4">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleSort(e.target.value as 'date' | 'wpm' | 'accuracy')}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-primary-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="date">Sort by Date</option>
-                    <option value="wpm">Sort by WPM</option>
-                    <option value="accuracy">Sort by Accuracy</option>
-                  </select>
-                  
-                  <button
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-3 py-2 bg-gray-200 dark:bg-primary-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-primary-600 transition-colors"
-                  >
-                    {sortOrder === 'asc' ? '↑' : '↓'}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            </div>
-          ) : history.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-gray-500 dark:text-gray-400 text-lg">
-                No typing tests completed yet
-              </div>
-              <p className="text-gray-400 dark:text-gray-500 mt-2">
-                Start typing to see your history here!
-              </p>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: '450px' }}>
-                <table className="w-full table-auto">
-                <thead className="sticky top-0 bg-gray-50 dark:bg-primary-700 z-10">
-                  <tr className="border-b border-gray-200 dark:border-gray-600">
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      Date
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      WPM
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      Accuracy
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      Characters
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      Errors
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      Mode
-                    </th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-white">
-                      Duration
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedHistory.map((test) => (
-                    <tr
-                      key={test.id}
-                      className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-primary-700 transition-colors"
-                    >
-                      <td className="py-3 px-4 text-gray-900 dark:text-white">
-                        {new Date(test.completedAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-blue-600 dark:text-blue-400">
-                          {test.wpm}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-green-600 dark:text-green-400">
-                          {test.accuracy}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-900 dark:text-white">
-                        {test.charactersTyped}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-red-600 dark:text-red-400">
-                          {test.errorsCount}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-full text-sm capitalize">
-                          {test.mode}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-gray-900 dark:text-white">
-                        {test.duration}s
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            </div>
-          )}
-          
-          {/* Statistics Summary */}
-          {history.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Summary Statistics
-              </h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {history.length}
-                  </div>
-                  <div className="text-sm text-blue-600 dark:text-blue-400">
-                    Total Tests
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {Math.round(history.reduce((sum, test) => sum + test.wpm, 0) / history.length)}
-                  </div>
-                  <div className="text-sm text-green-600 dark:text-green-400">
-                    Average WPM
-                  </div>
-                </div>
-                
-                <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                    {Math.round(history.reduce((sum, test) => sum + test.accuracy, 0) / history.length)}%
-                  </div>
-                  <div className="text-sm text-purple-600 dark:text-purple-400">
-                    Average Accuracy
-                  </div>
-                </div>
-                
-                <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    {Math.max(...history.map(test => test.wpm))}
-                  </div>
-                  <div className="text-sm text-orange-600 dark:text-orange-400">
-                    Best WPM
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+      <div className="mb-6 flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+        <div role="group" aria-label="Duration" className="flex items-center gap-2">
+          <span className="text-sm text-primary-600 dark:text-primary-400">Duration</span>
+          <div className="segmented">
+            {DURATIONS.map((d) => (
+              <button key={d ?? 'all'} type="button" className="segment" aria-pressed={selectedDuration === d} onClick={() => setSelectedDuration(d)}>
+                {d === null ? 'All' : `${d}s`}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div role="group" aria-label="Mode" className="flex items-center gap-2">
+          <span className="text-sm text-primary-600 dark:text-primary-400">Mode</span>
+          <div className="segmented">
+            {MODES.map((m) => (
+              <button key={m || 'all'} type="button" className="segment capitalize" aria-pressed={selectedMode === m} onClick={() => setSelectedMode(m)}>
+                {m || 'All'}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {history.length > 0 && (
+        <div className="mb-6">
+          <StatStrip
+            items={[
+              { label: 'Tests shown', value: history.length },
+              { label: 'Average WPM', value: avg('wpm') },
+              { label: 'Average accuracy', value: `${avg('accuracy')}%` },
+              { label: 'Best WPM', value: Math.max(...history.map((t) => t.wpm)) },
+            ]}
+          />
+        </div>
+      )}
+
+      <div className="card overflow-hidden" aria-busy={loading}>
+        {loading ? (
+          <Spinner label="Loading history" />
+        ) : failed ? (
+          <div className="px-6 py-16 text-center" role="alert">
+            <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">Your history did not load</h2>
+            <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">Check your connection and reload the page.</p>
+          </div>
+        ) : history.length === 0 ? (
+          <div className="px-6 py-16 text-center">
+            <h2 className="text-lg font-semibold text-primary-950 dark:text-ember-200">{selectedDuration || selectedMode ? 'No tests match these filters' : 'No tests yet'}</h2>
+            <p className="mx-auto mt-2 max-w-sm text-primary-700 dark:text-primary-300">
+              {selectedDuration || selectedMode ? 'Try All to see every test.' : 'Finish a test while signed in and it appears here.'}
+            </p>
+            <Link to="/" className="btn-primary mt-6">Start a test</Link>
+          </div>
+        ) : (
+          <div className="max-h-[32rem] overflow-auto">
+            <table className="w-full text-center">
+              <caption className="sr-only">Your typing tests</caption>
+              <thead className="sticky top-0 z-10 bg-white dark:bg-primary-900">
+                <tr className="border-b border-primary-200 text-xs text-primary-600 dark:border-ember-300/10 dark:text-primary-400">
+                  <SortHead k="date">Date</SortHead>
+                  <SortHead k="wpm">WPM</SortHead>
+                  <SortHead k="accuracy">Accuracy</SortHead>
+                  <th scope="col" className="hidden px-3 py-3 font-medium sm:table-cell">Characters</th>
+                  {plain('Errors')}
+                  <th scope="col" className="hidden px-3 py-3 font-medium sm:table-cell">Mode</th>
+                  {plain('Length')}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((t) => (
+                  <tr key={t.id} className="border-b border-primary-100 transition-colors last:border-0 hover:bg-primary-50 dark:border-ember-300/5 dark:hover:bg-ember-300/5">
+                    <td className="px-3 py-3 text-sm text-primary-800 dark:text-primary-200">
+                      {new Date(t.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="px-3 py-3 font-mono font-semibold tabular text-primary-950 dark:text-ember-300">{t.wpm}</td>
+                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{t.accuracy}%</td>
+                    <td className="hidden px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200 sm:table-cell">{t.charactersTyped}</td>
+                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{t.errorsCount}</td>
+                    <td className="hidden px-3 py-3 sm:table-cell">
+                      <span className="rounded-md border border-primary-200 px-2 py-0.5 text-xs capitalize text-primary-700 dark:border-ember-300/15 dark:text-primary-300">{t.mode}</span>
+                    </td>
+                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{t.duration}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </PageShell>
   );
 };
 

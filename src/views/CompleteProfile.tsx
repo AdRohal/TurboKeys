@@ -5,6 +5,7 @@ import { useNavigate } from '@/lib/router';
 import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../services/api';
 import { validateUsername } from '@/lib/profile';
+import { Notice, Spinner, Avatar } from '../components/ui/kit';
 
 const CompleteProfile: React.FC = () => {
   const navigate = useNavigate();
@@ -117,126 +118,91 @@ const CompleteProfile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-primary-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
-        </div>
+      <div className="min-h-[calc(100vh-4rem)] grid place-items-center">
+        <Spinner label="Loading your profile" />
       </div>
     );
   }
 
+  const usernameProblem = formData.username.length > 0 ? validateUsername(formData.username) : '';
+  const canSubmit = !submitting && !!formData.fullName.trim() && !!formData.username && !usernameProblem && usernameAvailable !== false && !checkingUsername;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-primary-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 card p-6 sm:p-10">
-        <div>
-          <div className="flex justify-center">
-            <img
-              className="h-12 w-auto"
-              src="/Logo/icon.png"
-              alt="TurboKeys"
-            />
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Complete Your Profile
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Please complete your profile to get started
+    <div className="min-h-[calc(100vh-4rem)] py-10 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="card w-full max-w-lg p-6 sm:p-10">
+        <div className="flex flex-col items-center text-center">
+          <Avatar name={formData.fullName || user?.email} />
+          <h1 className="mt-6 text-balance text-3xl font-bold tracking-tight text-primary-950 dark:text-ember-300 sm:text-4xl">Finish setting up</h1>
+          <p className="mt-2 max-w-sm text-sm text-primary-700 dark:text-primary-300">
+            Pick the name that appears on the leaderboard. You can change your full name later; your username stays.
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
-            {/* Email (read-only) */}
-            <div>
-              <label htmlFor="email" className="sr-only">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={user?.email || ''}
-                disabled
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm bg-gray-100 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 dark:placeholder-gray-400"
-                placeholder="Email address"
-              />
-            </div>
-
-            {/* Full Name */}
-            <div>
-              <label htmlFor="fullName" className="sr-only">
-                Full Name
-              </label>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                required
-                value={formData.fullName}
-                onChange={handleInputChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm dark:bg-primary-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-                placeholder="Full Name"
-              />
-            </div>
-
-            {/* Username */}
-            <div>
-              <label htmlFor="username" className="sr-only">
-                Username
-              </label>
-              <div className="relative">
-                <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  required
-                  value={formData.username}
-                  onChange={handleInputChange}
-                  className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm dark:bg-primary-800 dark:border-gray-600 dark:text-white dark:placeholder-gray-400"
-                  placeholder="Username"
-                />
-                {checkingUsername && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Username availability indicator */}
-              {formData.username.length >= 3 && !checkingUsername && (
-                <div className="mt-1 text-sm">
-                  {usernameAvailable === true && (
-                    <span className="text-green-600 dark:text-green-400">
-                      ✓ Username is available
-                    </span>
-                  )}
-                  {usernameAvailable === false && (
-                    <span className="text-red-600 dark:text-red-400">
-                      ✗ Username is not available
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Error message */}
-          {errors.general && (
-            <div className="text-red-600 dark:text-red-400 text-sm text-center">
-              {errors.general}
-            </div>
-          )}
+        <form className="mt-8 space-y-5" onSubmit={handleSubmit} noValidate>
+          {errors.general && <Notice>{errors.general}</Notice>}
 
           <div>
-            <button
-              type="submit"
-              disabled={submitting || !formData.fullName || !formData.username || usernameAvailable === false}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-500 dark:hover:bg-blue-600"
-            >
-              {submitting ? 'Completing...' : 'Complete Profile'}
-            </button>
+            <label htmlFor="email" className="block text-sm font-medium text-primary-800 dark:text-primary-200">Email</label>
+            <input id="email" name="email" type="email" value={user?.email || ''} disabled readOnly className="input-field mt-1 opacity-70 cursor-not-allowed" />
           </div>
+
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium text-primary-800 dark:text-primary-200">Full name</label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              autoComplete="name"
+              required
+              value={formData.fullName}
+              onChange={handleInputChange}
+              className="input-field mt-1"
+              placeholder="Ada Lovelace"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-primary-800 dark:text-primary-200">Username</label>
+            <div className="relative mt-1">
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                required
+                aria-describedby="username-status"
+                aria-invalid={!!usernameProblem || usernameAvailable === false}
+                value={formData.username}
+                onChange={handleInputChange}
+                className="input-field pr-10 font-mono"
+                placeholder="ada_types"
+              />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                {checkingUsername && <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-300 border-t-primary-700 dark:border-ember-300/20 dark:border-t-ember-300" />}
+                {!checkingUsername && usernameAvailable === true && <span aria-hidden="true" className="text-emerald-600 dark:text-emerald-300">✓</span>}
+                {!checkingUsername && usernameAvailable === false && <span aria-hidden="true" className="text-red-600 dark:text-red-300">✗</span>}
+              </span>
+            </div>
+            <p id="username-status" className="mt-1.5 min-h-[1.25rem] text-sm" role="status">
+              {usernameProblem ? (
+                <span className="text-red-700 dark:text-red-300">{usernameProblem}</span>
+              ) : checkingUsername ? (
+                <span className="text-primary-600 dark:text-primary-400">Checking…</span>
+              ) : usernameAvailable === true ? (
+                <span className="text-emerald-700 dark:text-emerald-300">{formData.username} is available</span>
+              ) : usernameAvailable === false ? (
+                <span className="text-red-700 dark:text-red-300">That username is taken</span>
+              ) : (
+                <span className="text-primary-600 dark:text-primary-400">3 to 30 characters: letters, numbers, dots, dashes or underscores.</span>
+              )}
+            </p>
+          </div>
+
+          <button type="submit" disabled={!canSubmit} className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-50">
+            {submitting ? 'Saving…' : 'Save and start typing'}
+          </button>
         </form>
       </div>
     </div>

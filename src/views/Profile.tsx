@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { Link } from '@/lib/router';
 import { useAuth } from '../contexts/AuthContext';
 import { userAPI, typingAPI } from '../services/api';
 import { TypingTestResult } from '../types';
+import { Avatar, PageShell, Spinner, StatStrip, shortId } from '../components/ui/kit';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
@@ -14,10 +16,7 @@ const Profile: React.FC = () => {
   useEffect(() => {
     const loadProfileData = async () => {
       try {
-        const [tests, stats] = await Promise.all([
-          typingAPI.getUserTests(10),
-          userAPI.getUserStats(),
-        ]);
+        const [tests, stats] = await Promise.all([typingAPI.getUserTests(10), userAPI.getUserStats()]);
         setUserTests(tests);
         setUserStats(stats);
       } catch (error) {
@@ -27,134 +26,84 @@ const Profile: React.FC = () => {
       }
     };
 
-    if (user) {
-      loadProfileData();
-    }
+    if (user) loadProfileData();
   }, [user]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
-      </div>
+      <PageShell>
+        <Spinner label="Loading your profile" />
+      </PageShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-primary-900 py-8">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* User Info */}
-          <div className="card p-6 mb-8">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xl font-bold">
-                  {user?.username?.charAt(0).toUpperCase()}
-                </span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {user?.username}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400">{user?.email}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Stats Overview */}
-          {userStats && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="card p-6 text-center">
-                <div className="text-3xl font-bold text-primary-600 mb-2">
-                  {userStats.averageWpm || 0}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Average WPM
-                </div>
-              </div>
-              <div className="card p-6 text-center">
-                <div className="text-3xl font-bold text-green-600 mb-2">
-                  {userStats.averageAccuracy || 0}%
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Average Accuracy
-                </div>
-              </div>
-              <div className="card p-6 text-center">
-                <div className="text-3xl font-bold text-primary-600 dark:text-primary-400 mb-2">
-                  {userStats.testsCompleted || 0}
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Tests Completed
-                </div>
-              </div>
-            </div>
+    <PageShell width="max-w-5xl">
+      <section className="card flex flex-col items-center gap-5 p-6 text-center sm:p-8">
+        <Avatar name={user?.username} />
+        <div className="min-w-0">
+          <h1 className="truncate text-3xl font-bold tracking-tight text-primary-950 dark:text-ember-300 sm:text-4xl">{user?.username}</h1>
+          <p className="mt-1 text-primary-700 dark:text-primary-300">{user?.email}</p>
+          {user?.id && (
+            <p className="mt-3 inline-block rounded-md border border-primary-200 px-2.5 py-1 font-mono text-xs text-primary-600 dark:border-ember-300/15 dark:text-primary-400" title="Your player id">
+              {shortId(user.id)}
+            </p>
           )}
-
-          {/* Recent Tests */}
-          <div className="card p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Recent Tests
-            </h2>
-            {userTests.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Date
-                      </th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Mode
-                      </th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        WPM
-                      </th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Accuracy
-                      </th>
-                      <th className="text-left py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Errors
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {userTests.map((test) => (
-                      <tr
-                        key={test.id}
-                        className="border-b border-gray-100 dark:border-gray-800"
-                      >
-                        <td className="py-3 text-sm text-gray-900 dark:text-gray-100">
-                          {new Date(test.completedAt).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 text-sm text-gray-900 dark:text-gray-100">
-                          {test.mode}
-                        </td>
-                        <td className="py-3 text-sm font-medium text-primary-600">
-                          {test.wpm}
-                        </td>
-                        <td className="py-3 text-sm font-medium text-green-600">
-                          {test.accuracy}%
-                        </td>
-                        <td className="py-3 text-sm font-medium text-red-600">
-                          {test.errorsCount}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-gray-600 dark:text-gray-400">
-                  No tests completed yet. Start typing to see your results here!
-                </p>
-              </div>
-            )}
-          </div>
         </div>
-      </div>
-    </div>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link to="/account" className="btn-secondary">Edit account</Link>
+          <Link to="/history" className="btn-secondary">Full history</Link>
+        </div>
+      </section>
+
+      {userStats && (
+        <div className="mt-6">
+          <StatStrip
+            items={[
+              { label: 'Average WPM', value: userStats.averageWpm || 0 },
+              { label: 'Average accuracy', value: `${userStats.averageAccuracy || 0}%` },
+              { label: 'Tests completed', value: userStats.testsCompleted || 0 },
+            ]}
+          />
+        </div>
+      )}
+
+      <section className="card mt-6 overflow-hidden" aria-labelledby="recent-tests">
+        <h2 id="recent-tests" className="px-5 pt-5 text-center text-xl font-semibold text-primary-950 dark:text-ember-300">
+          Recent tests
+        </h2>
+        {userTests.length > 0 ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-center">
+              <caption className="sr-only">Your ten most recent typing tests</caption>
+              <thead>
+                <tr className="border-y border-primary-200 text-xs text-primary-600 dark:border-ember-300/10 dark:text-primary-400">
+                  {['Date', 'Mode', 'WPM', 'Accuracy', 'Errors'].map((h) => (
+                    <th key={h} scope="col" className="px-3 py-3 font-medium">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {userTests.map((test) => (
+                  <tr key={test.id} className="border-b border-primary-100 transition-colors last:border-0 hover:bg-primary-50 dark:border-ember-300/5 dark:hover:bg-ember-300/5">
+                    <td className="px-3 py-3 text-sm text-primary-800 dark:text-primary-200">{new Date(test.completedAt).toLocaleDateString()}</td>
+                    <td className="px-3 py-3 text-sm capitalize text-primary-800 dark:text-primary-200">{test.mode}</td>
+                    <td className="px-3 py-3 font-mono font-semibold tabular text-primary-950 dark:text-ember-300">{test.wpm}</td>
+                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{test.accuracy}%</td>
+                    <td className="px-3 py-3 font-mono tabular text-primary-800 dark:text-primary-200">{test.errorsCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="px-6 py-14 text-center">
+            <p className="mx-auto max-w-sm text-primary-700 dark:text-primary-300">No tests yet. Finish one and it shows up here.</p>
+            <Link to="/" className="btn-primary mt-6">Start a test</Link>
+          </div>
+        )}
+      </section>
+    </PageShell>
   );
 };
 
