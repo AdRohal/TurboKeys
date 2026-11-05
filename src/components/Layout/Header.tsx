@@ -12,7 +12,7 @@ const CHALLENGES = [
 ];
 const NAV = [{ to: '/leaderboard', label: 'Leaderboard' }];
 
-const icon = 'w-[18px] h-[18px]';
+const icon = 'w-4 h-4';
 const stroke = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 
 const SunIcon = () => (
@@ -77,9 +77,9 @@ const Header: React.FC = () => {
   const active = (to: string) => (to === '/' ? pathname === '/' : pathname.startsWith(to));
   const inChallenges = CHALLENGES.some((c) => active(c.to));
   const navClass = (to: string) =>
-    `relative px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+    `relative px-2.5 py-1 text-[13px] font-medium rounded transition-colors ${
       active(to)
-        ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[9px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
+        ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[10px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
         : 'text-primary-700 hover:text-primary-950 dark:text-primary-300 dark:hover:text-ember-200'
     }`;
   const menuItem =
@@ -90,8 +90,8 @@ const Header: React.FC = () => {
       <div className="mx-auto flex h-12 max-w-7xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2.5 font-semibold tracking-tight text-primary-950 dark:text-ember-300" aria-label="TurboKeys home">
-            <img src="/Logo/icon.png" alt="" width={30} height={30} className="h-[30px] w-[30px] rounded-md object-contain" />
-            <span className="text-[1.05rem]">TurboKeys</span>
+            <img src="/Logo/icon.png" alt="" width={24} height={24} className="h-6 w-6 rounded object-contain" />
+            <span className="text-base">TurboKeys</span>
           </Link>
           <nav aria-label="Main" className="hidden md:flex items-center gap-1">
             <div className="relative" ref={challengesRef}>
@@ -100,9 +100,9 @@ const Header: React.FC = () => {
                 onClick={() => setChallengesOpen((o) => !o)}
                 aria-haspopup="menu"
                 aria-expanded={challengesOpen}
-                className={`relative flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`relative flex items-center gap-1.5 px-2.5 py-1 text-[13px] font-medium rounded transition-colors ${
                   inChallenges
-                    ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[9px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
+                    ? 'text-primary-950 dark:text-ember-300 after:absolute after:left-3 after:right-3 after:-bottom-[10px] after:h-px after:bg-primary-600 dark:after:bg-ember-300'
                     : 'text-primary-700 hover:text-primary-950 dark:text-primary-300 dark:hover:text-ember-200'
                 }`}
               >
@@ -140,7 +140,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={toggleTheme}
-            className="grid h-8 w-8 place-items-center rounded-lg border border-primary-200 text-primary-700 hover:bg-primary-100 dark:border-ember-300/10 dark:text-primary-300 dark:hover:bg-ember-300/10 dark:hover:text-ember-300 transition-colors"
+            className="grid h-8 w-8 place-items-center rounded-md border border-primary-200 text-primary-700 hover:bg-primary-100 dark:border-ember-300/10 dark:text-primary-300 dark:hover:bg-ember-300/10 dark:hover:text-ember-300 transition-colors"
             aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
           >
             {theme === 'light' ? <MoonIcon /> : <SunIcon />}
@@ -153,9 +153,9 @@ const Header: React.FC = () => {
                   onClick={() => setMenuOpen((o) => !o)}
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
-                  className="flex h-10 items-center gap-2 rounded-lg border border-primary-200 pl-1.5 pr-3 text-sm font-medium text-primary-900 hover:bg-primary-100 dark:border-ember-300/10 dark:text-ember-200 dark:hover:bg-ember-300/10 transition-colors"
+                  className="flex h-8 items-center gap-1.5 rounded-md border border-primary-200 pl-1.5 pr-3 text-sm font-medium text-primary-900 hover:bg-primary-100 dark:border-ember-300/10 dark:text-ember-200 dark:hover:bg-ember-300/10 transition-colors"
                 >
-                  <span className="grid h-7 w-7 place-items-center rounded-md bg-primary-600 text-xs font-bold text-white dark:bg-ember-300 dark:text-primary-950">
+                  <span className="grid h-5 w-5 place-items-center rounded bg-primary-600 text-xs font-bold text-white dark:bg-ember-300 dark:text-primary-950">
                     {user.username.charAt(0).toUpperCase()}
                   </span>
                   <span>{user.username}</span>
@@ -180,10 +180,10 @@ const Header: React.FC = () => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link to="/login" className="btn-secondary !min-h-[40px] !py-1.5 !px-4">
+                <Link to="/login" className="btn-secondary !min-h-[30px] !py-0 !px-3 !text-[13px] !rounded">
                   Sign in
                 </Link>
-                <Link to="/register" className="btn-primary !min-h-[40px] !py-1.5 !px-4">
+                <Link to="/register" className="btn-primary !min-h-[30px] !py-0 !px-3 !text-[13px] !rounded">
                   Create account
                 </Link>
               </div>
